@@ -54,12 +54,15 @@ def _seed_announcement(db_session):
                         "grade_thickness": 45,
                         "depth_category": "shallow",
                         "interval_quality_label": "strong",
+                        "company_percentile": 80,
                         "project_percentile": 80,
                         "trend_vs_previous": "improving",
                         "materiality_label": "high",
+                        "company_history_count": 5,
+                        "project_history_count": 5,
                         "reason": "grade-thickness is 45",
                         "qualitative_assessment": (
-                            "This is a strong result in the project's stored history, "
+                            "Within the stored project history, this interval ranks as strong, "
                             "with grade-thickness in the 80th percentile, shallow depth, and high materiality."
                         ),
                     },
@@ -83,7 +86,7 @@ def test_announcements_api_returns_ai_metrics_with_qualitative_context(db_sessio
     assert context["depth_category"] == "shallow"
     assert context["trend_vs_previous"] == "improving"
     assert context["materiality_label"] == "high"
-    assert "company_percentile" not in context
+    assert context["company_percentile"] == 80
 
 
 def test_stock_announcements_api_returns_ai_metrics_with_qualitative_context(db_session):

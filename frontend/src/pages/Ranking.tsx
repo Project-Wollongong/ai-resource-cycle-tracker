@@ -92,7 +92,7 @@ export default function Ranking() {
       title: "收盘",
       key: "close",
       width: 90,
-      render: (_, s) => (s.last_close != null ? s.last_close.toFixed(3) : "–"),
+      render: (_, s) => (s.last_close != null ? s.last_close.toFixed(3) : "-"),
     },
     {
       title: "涨跌",

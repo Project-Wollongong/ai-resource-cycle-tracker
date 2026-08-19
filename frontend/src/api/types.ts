@@ -36,6 +36,34 @@ export interface PriceBar {
   volume: number;
 }
 
+export interface QualitativeContext {
+  intercept_index: number;
+  width_m: number;
+  grade: number;
+  unit: string;
+  normalized_unit: string;
+  commodity: string;
+  project: string | null;
+  region: string | null;
+  extraction_quality: "complete" | "partial";
+  missing_fields: string[];
+  comparison_warnings: string[];
+  grade_thickness: number;
+  depth_category: "shallow" | "medium" | "deep" | "unknown";
+  interval_quality_label: "exceptional" | "strong" | "moderate" | "weak" | "insufficient_history";
+  company_percentile: number | null;
+  project_percentile: number | null;
+  regional_percentile: number | null;
+  trend_vs_previous: "improving" | "flat" | "deteriorating" | "insufficient_history";
+  trend_basis: "project" | "company" | "insufficient_history";
+  materiality_label: "high" | "medium" | "low" | "insufficient_history";
+  company_history_count: number;
+  project_history_count: number;
+  regional_history_count: number;
+  reason: string;
+  qualitative_assessment: string;
+}
+
 export interface Announcement {
   id: number;
   code: string;
@@ -48,7 +76,12 @@ export interface Announcement {
   type_score: number;
   matched_keywords: string[];
   ai_summary: string | null;
-  ai_metrics: Record<string, unknown> | null;
+  ai_metrics:
+    | (Record<string, unknown> & {
+        qualitative_context?: QualitativeContext;
+        qualitative_contexts?: QualitativeContext[];
+      })
+    | null;
 }
 
 export interface SignalReturn {
@@ -116,6 +149,10 @@ export interface ReportContent {
     headline: string;
     price_sensitive: boolean;
     url: string;
+    quality?: string | null;
+    materiality?: string | null;
+    assessment?: string | null;
+    grade_thickness?: number | null;
   }[];
   movers: { code: string; day_change_pct: number }[];
   source_degraded: string[];

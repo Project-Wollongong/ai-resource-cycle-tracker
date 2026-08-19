@@ -1,4 +1,5 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+import json
 
 import pytest
 
@@ -15,6 +16,8 @@ from app.analysis.scoring import (
     funding_score,
     label_for,
 )
+from app.models import Announcement, PriceBar, ScoreSnapshot, Stock
+from app.services.scoring_service import score_and_signal_stock
 from app.services.config_service import DEFAULTS
 
 from conftest import make_bars
@@ -137,6 +140,170 @@ def test_announcement_low_base_gets_no_bonus():
     anns = [ann(0, 85), ann(1, 50, "PLACEMENT"), ann(2, 55, "TRADING_HALT")]
     _, comps = announcement_score(anns, AS_OF)
     assert comps["bonus"] == 0
+
+
+def test_announcement_qualitative_context_adds_bounded_bonus_and_components():
+    score, comps = announcement_score(
+        [
+            ann(
+                0,
+                type_score=70,
+                ps=False,
+                headline="high quality drill result",
+            ),
+            ScoredAnnouncement(
+                headline="contextual drill result",
+                ann_type="DRILL_RESULTS",
+                type_score=70,
+                ann_date=AS_OF,
+                price_sensitive=False,
+                interval_quality_label="strong",
+                materiality_label="high",
+                grade_thickness=45.0,
+                qualitative_assessment="Strong in stored project history.",
+            ),
+        ],
+        AS_OF,
+    )
+
+    contextual = comps["announcements"][0]
+    assert score == 83.0
+    assert contextual["qualitative_bonus"] == 8.0
+    assert contextual["adjusted_base"] == 78.0
+    assert contextual["interval_quality_label"] == "strong"
+    assert contextual["materiality_label"] == "high"
+    assert contextual["grade_thickness"] == 45.0
+    assert contextual["qualitative_assessment"] == "Strong in stored project history."
+    assert comps["bonus"] == 5
+
+
+def test_score_snapshot_announcement_components_include_qualitative_context(db_session):
+    stock = Stock(code="TST", name="Test Resources", commodity="gold")
+    db_session.add(stock)
+    db_session.commit()
+
+    bars = make_bars([1.0] * 61, [100_000] * 61)
+    for bar in bars:
+        db_session.add(
+            PriceBar(
+                stock_id=stock.id,
+                date=bar.date,
+                open=bar.open,
+                high=bar.high,
+                low=bar.low,
+                close=bar.close,
+                volume=bar.volume,
+            )
+        )
+    eval_date = bars[-1].date
+    db_session.add(
+        Announcement(
+            stock_id=stock.id,
+            ann_id="ann-context",
+            headline="High-grade drilling at project",
+            ann_date=datetime.combine(eval_date, datetime.min.time()),
+            url="https://example.com/ann.pdf",
+            price_sensitive=True,
+            ann_type="DRILL_RESULTS",
+            type_score=70,
+            matched_keywords="[]",
+            raw_payload="{}",
+            ai_metrics=json.dumps(
+                {
+                    "qualitative_context": {
+                        "interval_quality_label": "strong",
+                        "materiality_label": "high",
+                        "grade_thickness": 45.0,
+                        "qualitative_assessment": "Strong in stored project history.",
+                    }
+                }
+            ),
+        )
+    )
+    db_session.commit()
+
+    score_and_signal_stock(
+        db_session,
+        stock,
+        thresholds=DEFAULTS["signal_thresholds"],
+        weights=DEFAULTS["weights"],
+        label_thresholds=DEFAULTS["label_thresholds"],
+        commodity_map={},
+    )
+
+    snapshot = db_session.query(ScoreSnapshot).filter_by(stock_id=stock.id, date=eval_date).one()
+    components = json.loads(snapshot.components)
+    ann_item = components["announcement"]["announcements"][0]
+    assert ann_item["qualitative_bonus"] == 8.0
+    assert ann_item["interval_quality_label"] == "strong"
+    assert ann_item["materiality_label"] == "high"
+    assert ann_item["grade_thickness"] == 45.0
+    assert snapshot.resource_score == 83.0
+    assert components["resource"]["source"] == "qualitative_context_auto"
+    assert components["resource"]["context_count"] == 1
+    assert components["resource"]["items"][0]["score"] == 83.0
+
+
+def test_manual_resource_override_still_wins_over_qualitative_context(db_session):
+    stock = Stock(code="TST", name="Test Resources", commodity="gold", resource_score_override=62.0)
+    db_session.add(stock)
+    db_session.commit()
+
+    bars = make_bars([1.0] * 61, [100_000] * 61)
+    for bar in bars:
+        db_session.add(
+            PriceBar(
+                stock_id=stock.id,
+                date=bar.date,
+                open=bar.open,
+                high=bar.high,
+                low=bar.low,
+                close=bar.close,
+                volume=bar.volume,
+            )
+        )
+    eval_date = bars[-1].date
+    db_session.add(
+        Announcement(
+            stock_id=stock.id,
+            ann_id="ann-context",
+            headline="Exceptional drilling at project",
+            ann_date=datetime.combine(eval_date, datetime.min.time()),
+            url="https://example.com/ann.pdf",
+            price_sensitive=True,
+            ann_type="DRILL_RESULTS",
+            type_score=85,
+            matched_keywords="[]",
+            raw_payload="{}",
+            ai_metrics=json.dumps(
+                {
+                    "qualitative_context": {
+                        "interval_quality_label": "exceptional",
+                        "materiality_label": "high",
+                        "trend_vs_previous": "improving",
+                        "depth_category": "shallow",
+                        "project_percentile": 95,
+                        "grade_thickness": 120.0,
+                    }
+                }
+            ),
+        )
+    )
+    db_session.commit()
+
+    score_and_signal_stock(
+        db_session,
+        stock,
+        thresholds=DEFAULTS["signal_thresholds"],
+        weights=DEFAULTS["weights"],
+        label_thresholds=DEFAULTS["label_thresholds"],
+        commodity_map={},
+    )
+
+    snapshot = db_session.query(ScoreSnapshot).filter_by(stock_id=stock.id, date=eval_date).one()
+    components = json.loads(snapshot.components)
+    assert snapshot.resource_score == 62.0
+    assert components["resource"] == {"value": 62.0, "source": "manual_override"}
 
 
 # ---------- commodity ----------

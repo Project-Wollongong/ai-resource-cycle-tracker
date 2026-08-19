@@ -11,6 +11,7 @@ naturally). Signals whose stock stops printing bars long enough are marked
 visible instead of silently dropped.
 """
 
+import json
 import statistics
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
@@ -18,11 +19,25 @@ from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from ..models import CommodityBar, PriceBar, Signal, SignalReturn
+from ..models import Announcement, CommodityBar, PriceBar, Signal, SignalReturn
 from .config_service import get_config
 
 BUCKETS = ((0, 45, "0-45"), (45, 60, "45-60"), (60, 75, "60-75"), (75, 1000, "75-100"))
 LOW_SAMPLE_N = 10
+QUALITATIVE_GROUPS = ("interval_quality", "materiality")
+INTERVAL_QUALITY_RANK = {
+    "exceptional": 5,
+    "strong": 4,
+    "moderate": 3,
+    "weak": 2,
+    "insufficient_history": 1,
+}
+MATERIALITY_RANK = {
+    "high": 3,
+    "medium": 2,
+    "low": 1,
+    "insufficient_history": 0,
+}
 
 
 def _load_instrument_series(session: Session, instrument: str) -> tuple[list[date], list[float]]:
@@ -110,20 +125,105 @@ def _bucket_for(score: float | None) -> str:
     return "n/a (replay)"
 
 
-def _group_key(sig: Signal, group_by: str) -> str:
+def _loads_json(raw: str | None) -> dict:
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _qualitative_contexts_from_metrics(raw_metrics: str | None) -> list[dict]:
+    metrics = _loads_json(raw_metrics)
+    contexts = metrics.get("qualitative_contexts")
+    if isinstance(contexts, list):
+        return [c for c in contexts if isinstance(c, dict)]
+    context = metrics.get("qualitative_context")
+    return [context] if isinstance(context, dict) else []
+
+
+def _ann_ids_from_evidence(raw_evidence: str | None) -> list[str]:
+    evidence = _loads_json(raw_evidence)
+    announcements = evidence.get("announcements")
+    if not isinstance(announcements, list):
+        return []
+    ann_ids = []
+    for item in announcements:
+        if isinstance(item, dict) and item.get("ann_id"):
+            ann_ids.append(str(item["ann_id"]))
+    return ann_ids
+
+
+def _contexts_for_signal(session: Session, sig: Signal) -> list[dict]:
+    ann_ids = _ann_ids_from_evidence(sig.evidence)
+    announcements = []
+    if ann_ids:
+        announcements = (
+            session.query(Announcement)
+            .filter(
+                Announcement.stock_id == sig.stock_id,
+                Announcement.ann_id.in_(ann_ids),
+                Announcement.ai_metrics.isnot(None),
+            )
+            .all()
+        )
+
+    if not announcements:
+        start = datetime.combine(sig.date, datetime.min.time())
+        end = datetime.combine(sig.date, datetime.max.time())
+        announcements = (
+            session.query(Announcement)
+            .filter(
+                Announcement.stock_id == sig.stock_id,
+                Announcement.ann_date >= start,
+                Announcement.ann_date <= end,
+                Announcement.ai_metrics.isnot(None),
+            )
+            .all()
+        )
+
+    contexts: list[dict] = []
+    for ann in announcements:
+        contexts.extend(_qualitative_contexts_from_metrics(ann.ai_metrics))
+    return contexts
+
+
+def _best_context_label(contexts: list[dict], key: str, rank: dict[str, int]) -> str:
+    labels = [str(c.get(key) or "").strip() for c in contexts if c.get(key)]
+    if not labels:
+        return "no_context"
+    return max(labels, key=lambda label: rank.get(label, -1))
+
+
+def _qualitative_group_key(session: Session, sig: Signal, group_by: str) -> str:
+    contexts = _contexts_for_signal(session, sig)
+    if group_by == "interval_quality":
+        return _best_context_label(contexts, "interval_quality_label", INTERVAL_QUALITY_RANK)
+    if group_by == "materiality":
+        return _best_context_label(contexts, "materiality_label", MATERIALITY_RANK)
+    return "no_context"
+
+
+def _group_key(sig: Signal, group_by: str, session: Session | None = None) -> str:
     if group_by == "label":
         return sig.label or "n/a"
     if group_by == "score_bucket":
         return _bucket_for(sig.cycle_score_at_signal)
+    if group_by in QUALITATIVE_GROUPS:
+        if session is None:
+            return "no_context"
+        return _qualitative_group_key(session, sig, group_by)
     return sig.signal_type
 
 
 def backtest_summary(session: Session, group_by: str = "signal_type", source: str = "all") -> dict:
     """Aggregate filled forward returns. Labels/scores only exist on live
     signals, so those groupings force source=live to avoid polluted stats."""
-    if group_by not in ("signal_type", "label", "score_bucket"):
+    if group_by not in ("signal_type", "label", "score_bucket", *QUALITATIVE_GROUPS):
         raise ValueError(f"invalid group_by: {group_by}")
-    if group_by in ("label", "score_bucket") and source == "all":
+    if group_by in ("label", "score_bucket", *QUALITATIVE_GROUPS) and source == "all":
         source = "live"
 
     q = (
@@ -140,8 +240,11 @@ def backtest_summary(session: Session, group_by: str = "signal_type", source: st
     unavailable_by_group: dict[str, int] = defaultdict(int)
     signal_ids: set[int] = set()
 
+    group_cache: dict[int, str] = {}
     for sr, sig in q.all():
-        key = _group_key(sig, group_by)
+        if sig.id not in group_cache:
+            group_cache[sig.id] = _group_key(sig, group_by, session)
+        key = group_cache[sig.id]
         if sr.status == "unavailable":
             unavailable_by_group[key] += 1
             continue

@@ -3,9 +3,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { api } from "../api/client";
-import type { DailyReport } from "../api/types";
+import type { DailyReport, ReportContent } from "../api/types";
 import LabelTag from "../components/LabelTag";
 import Pct from "../components/Pct";
+
+type ReportAnnouncement = ReportContent["announcements"][number];
 
 export default function Reports() {
   const [reports, setReports] = useState<DailyReport[]>([]);
@@ -32,7 +34,7 @@ export default function Reports() {
 
   return (
     <div>
-      <Typography.Title level={4}>每日报告</Typography.Title>
+      <Typography.Title level={4}>Daily Reports</Typography.Title>
       <Row gutter={16}>
         <Col span={5}>
           <List
@@ -49,7 +51,7 @@ export default function Reports() {
               >
                 <Space>
                   {r.report_date}
-                  {r.pushed ? <Tag color="green">已推送</Tag> : <Tag>未推送</Tag>}
+                  {r.pushed ? <Tag color="green">Pushed</Tag> : <Tag>Not pushed</Tag>}
                 </Space>
               </List.Item>
             )}
@@ -59,7 +61,7 @@ export default function Reports() {
           {content ? (
             <Space direction="vertical" size={12} style={{ width: "100%" }}>
               {content.source_degraded.length > 0 && (
-                <Alert type="warning" message={`公告源降级: ${content.source_degraded.join(", ")}`} />
+                <Alert type="warning" message={`Announcement source degraded: ${content.source_degraded.join(", ")}`} />
               )}
               <Card size="small" title="Top Cycle Scores">
                 <List
@@ -82,7 +84,7 @@ export default function Reports() {
                   )}
                 />
               </Card>
-              <Card size="small" title={`当日信号(${content.signals.length})`}>
+              <Card size="small" title={`Signals (${content.signals.length})`}>
                 {content.signals.length ? (
                   <List
                     size="small"
@@ -99,32 +101,26 @@ export default function Reports() {
                     )}
                   />
                 ) : (
-                  <Typography.Text type="secondary">当日无信号</Typography.Text>
+                  <Typography.Text type="secondary">No signals today</Typography.Text>
                 )}
               </Card>
-              <Card size="small" title="重要公告">
+              <Card size="small" title="Key Announcements">
                 {content.announcements.length ? (
                   <List
                     size="small"
                     dataSource={content.announcements}
                     renderItem={(a) => (
                       <List.Item>
-                        <Space>
-                          <Link to={`/stocks/${a.code}`}>{a.code}</Link>
-                          <Tag>{a.type}</Tag>
-                          <a href={a.url} target="_blank" rel="noreferrer">
-                            {a.price_sensitive && "⚡"} {a.headline}
-                          </a>
-                        </Space>
+                        <AnnouncementItem announcement={a} />
                       </List.Item>
                     )}
                   />
                 ) : (
-                  <Typography.Text type="secondary">无</Typography.Text>
+                  <Typography.Text type="secondary">None</Typography.Text>
                 )}
               </Card>
               {content.movers.length > 0 && (
-                <Card size="small" title="异动 ≥8%">
+                <Card size="small" title="Movers >= 8%">
                   <Space wrap>
                     {content.movers.map((m) => (
                       <span key={m.code}>
@@ -139,10 +135,48 @@ export default function Reports() {
               </Typography.Text>
             </Space>
           ) : (
-            <Alert type="info" message="还没有日报 — 先在设置页跑一次 pipeline" />
+            <Alert type="info" message="No daily report yet. Run the pipeline from Settings first." />
           )}
         </Col>
       </Row>
     </div>
+  );
+}
+
+function AnnouncementItem({ announcement: a }: { announcement: ReportAnnouncement }) {
+  const hasContext = a.quality || a.materiality || a.assessment || a.grade_thickness != null;
+  return (
+    <Space direction="vertical" size={4} style={{ width: "100%" }}>
+      <Space wrap>
+        <Link to={`/stocks/${a.code}`}>{a.code}</Link>
+        <Tag>{a.type}</Tag>
+        {a.price_sensitive && <Tag color="red">PS</Tag>}
+        <a href={a.url} target="_blank" rel="noreferrer">
+          {a.headline}
+        </a>
+      </Space>
+      {hasContext && (
+        <Space wrap>
+          {a.quality && <Tag color={a.quality === "insufficient_history" ? "warning" : "blue"}>quality: {a.quality}</Tag>}
+          {a.materiality && (
+            <Tag
+              color={
+                a.materiality === "high"
+                  ? "red"
+                  : a.materiality === "medium"
+                    ? "orange"
+                    : a.materiality === "insufficient_history"
+                      ? "warning"
+                      : "default"
+              }
+            >
+              materiality: {a.materiality}
+            </Tag>
+          )}
+          {a.grade_thickness != null && <Tag>GT {a.grade_thickness}</Tag>}
+          {a.assessment && <Typography.Text type="secondary">{a.assessment}</Typography.Text>}
+        </Space>
+      )}
+    </Space>
   );
 }

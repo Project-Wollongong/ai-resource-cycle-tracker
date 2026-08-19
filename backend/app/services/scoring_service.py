@@ -24,6 +24,8 @@ from ..models import Announcement, CommodityBar, PriceBar, ScoreSnapshot, Stock
 from .signal_service import persist_signals
 
 ANNOUNCEMENT_LOOKBACK_DAYS = 30
+RESOURCE_CONTEXT_LOOKBACK_DAYS = 365
+RESOURCE_CONTEXT_MAX_ITEMS = 8
 
 
 def load_bars(session: Session, stock: Stock) -> list[DailyBar]:
@@ -74,16 +76,20 @@ def score_and_signal_stock(
             type_score=a.type_score,
             ann_date=a.ann_date.date(),
             price_sensitive=a.price_sensitive,
+            **_qualitative_context_for_score(a.ai_metrics),
         )
         for a in ann_rows
     ]
     announcement, ann_comp = announcement_score(scored_anns, eval_date)
 
-    resource = stock.resource_score_override if stock.resource_score_override is not None else 50.0
-    resource_comp = {
-        "value": resource,
-        "source": "manual_override" if stock.resource_score_override is not None else "neutral_default",
-    }
+    if stock.resource_score_override is not None:
+        resource = stock.resource_score_override
+        resource_comp = {
+            "value": resource,
+            "source": "manual_override",
+        }
+    else:
+        resource, resource_comp = _resource_score_from_contexts(session, stock, eval_date)
     risk = stock.risk_score_override if stock.risk_score_override is not None else 50.0
     risk_comp = {
         "value": risk,
@@ -184,3 +190,152 @@ def score_and_signal_stock(
         "cycle_score": round(total, 1),
         "label": label,
     }
+
+
+def _qualitative_context_for_score(raw_metrics: str | None) -> dict:
+    if not raw_metrics:
+        return {}
+    try:
+        metrics = json.loads(raw_metrics)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(metrics, dict):
+        return {}
+    context = metrics.get("qualitative_context")
+    if not isinstance(context, dict):
+        return {}
+    return {
+        "interval_quality_label": context.get("interval_quality_label"),
+        "materiality_label": context.get("materiality_label"),
+        "grade_thickness": context.get("grade_thickness"),
+        "qualitative_assessment": context.get("qualitative_assessment"),
+    }
+
+
+def _resource_score_from_contexts(session: Session, stock: Stock, eval_date) -> tuple[float, dict]:
+    since = datetime.combine(eval_date - timedelta(days=RESOURCE_CONTEXT_LOOKBACK_DAYS), datetime.min.time())
+    until = datetime.combine(eval_date + timedelta(days=1), datetime.min.time())
+    rows = (
+        session.query(Announcement)
+        .filter(
+            Announcement.stock_id == stock.id,
+            Announcement.ann_date >= since,
+            Announcement.ann_date < until,
+            Announcement.ai_metrics.isnot(None),
+        )
+        .order_by(Announcement.ann_date.desc(), Announcement.id.desc())
+        .all()
+    )
+    items = []
+    for announcement in rows:
+        for context in _qualitative_contexts_from_metrics(announcement.ai_metrics):
+            item_score, drivers = _score_resource_context(context)
+            items.append(
+                {
+                    "ann_id": announcement.ann_id,
+                    "date": announcement.ann_date.date().isoformat(),
+                    "headline": announcement.headline[:100],
+                    "score": item_score,
+                    **drivers,
+                }
+            )
+
+    if not items:
+        return 50.0, {
+            "value": 50.0,
+            "source": "neutral_default",
+            "note": "no_qualitative_context",
+        }
+
+    ranked = sorted(items, key=lambda item: item["score"], reverse=True)[:RESOURCE_CONTEXT_MAX_ITEMS]
+    best = ranked[0]["score"]
+    avg = sum(item["score"] for item in ranked) / len(ranked)
+    value = round(0.7 * best + 0.3 * avg, 1)
+    return value, {
+        "value": value,
+        "source": "qualitative_context_auto",
+        "lookback_days": RESOURCE_CONTEXT_LOOKBACK_DAYS,
+        "context_count": len(items),
+        "used_count": len(ranked),
+        "best_context_score": best,
+        "avg_context_score": round(avg, 1),
+        "items": ranked,
+    }
+
+
+def _qualitative_contexts_from_metrics(raw_metrics: str | None) -> list[dict]:
+    if not raw_metrics:
+        return []
+    try:
+        metrics = json.loads(raw_metrics)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(metrics, dict):
+        return []
+    contexts = metrics.get("qualitative_contexts")
+    if isinstance(contexts, list):
+        return [item for item in contexts if isinstance(item, dict)]
+    context = metrics.get("qualitative_context")
+    return [context] if isinstance(context, dict) else []
+
+
+def _score_resource_context(context: dict) -> tuple[float, dict]:
+    quality = context.get("interval_quality_label")
+    materiality = context.get("materiality_label")
+    trend = context.get("trend_vs_previous")
+    depth = context.get("depth_category")
+    percentile = _best_percentile(context)
+
+    quality_score = {
+        "exceptional": 90.0,
+        "strong": 75.0,
+        "moderate": 60.0,
+        "weak": 40.0,
+        "insufficient_history": 50.0,
+    }.get(quality, 50.0)
+    materiality_adjust = {
+        "high": 8.0,
+        "medium": 4.0,
+        "low": -4.0,
+        "insufficient_history": 0.0,
+    }.get(materiality, 0.0)
+    trend_adjust = {
+        "improving": 5.0,
+        "flat": 0.0,
+        "deteriorating": -5.0,
+        "insufficient_history": 0.0,
+    }.get(trend, 0.0)
+    depth_adjust = {
+        "shallow": 3.0,
+        "medium": 0.0,
+        "deep": -3.0,
+        "unknown": 0.0,
+    }.get(depth, 0.0)
+    percentile_adjust = 0.0 if percentile is None else max(-8.0, min(8.0, (float(percentile) - 50.0) * 0.16))
+
+    score = max(0.0, min(100.0, quality_score + materiality_adjust + trend_adjust + depth_adjust + percentile_adjust))
+    return round(score, 1), {
+        "interval_quality_label": quality,
+        "materiality_label": materiality,
+        "trend_vs_previous": trend,
+        "depth_category": depth,
+        "grade_thickness": context.get("grade_thickness"),
+        "percentile": percentile,
+        "quality_score": quality_score,
+        "materiality_adjust": materiality_adjust,
+        "trend_adjust": trend_adjust,
+        "depth_adjust": depth_adjust,
+        "percentile_adjust": round(percentile_adjust, 1),
+        "assessment": context.get("qualitative_assessment"),
+    }
+
+
+def _best_percentile(context: dict) -> float | None:
+    for key in ("project_percentile", "company_percentile", "regional_percentile"):
+        value = context.get(key)
+        if value is not None:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+    return None

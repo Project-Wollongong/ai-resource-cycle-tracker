@@ -44,8 +44,10 @@ export default function Backtest() {
             <span>
               n={cell.n}
               {cell.low_sample && (
-                <Tooltip title="样本量 < 10,结论不可靠">
-                  <Tag color="warning" style={{ marginLeft: 6 }}>低样本</Tag>
+                <Tooltip title="样本量 < 10，结论不可靠">
+                  <Tag color="warning" style={{ marginLeft: 6 }}>
+                    低样本
+                  </Tag>
                 </Tooltip>
               )}
             </span>
@@ -65,7 +67,7 @@ export default function Backtest() {
       width: 100,
       render: (u: number) =>
         u > 0 ? (
-          <Tooltip title="停牌/退市导致无法回填的信号数(生存者偏差透明化)">
+          <Tooltip title="停牌或退市导致无法回填的信号数，用于暴露幸存者偏差">
             <Tag>{u}</Tag>
           </Tooltip>
         ) : null,
@@ -107,13 +109,13 @@ export default function Backtest() {
 
   return (
     <div>
-      <Typography.Title level={4}>回测:信号历史上有没有参考价值?</Typography.Title>
+      <Typography.Title level={4}>回测：信号历史上有没有参考价值</Typography.Title>
       <Alert
         type="info"
         showIcon
         style={{ marginBottom: 12 }}
         message="回测口径"
-        description="入场价 = 信号后首个交易日收盘价;超额 = 收益 − 同期 OZR.AX(ASX 资源 ETF)收益。replay 信号由历史行情重放价格类规则产生,不含标签/公告信号;系统只度量公告标题的正面故事强度,存在负面消息盲区。仅供研究参考,不构成投资建议。"
+        description="入场价 = 信号后首个交易日收盘价；超额 = 信号收益 - 同期 OZR.AX（ASX 资源 ETF）收益。replay 信号由历史行情重放价格类规则产生，不含标签和公告信号。系统只度量公告标题和量价规则下的正面故事强度，存在负面消息盲区。仅供研究参考，不构成投资建议。"
       />
       <Space style={{ marginBottom: 12 }} wrap>
         <Segmented
@@ -121,8 +123,10 @@ export default function Backtest() {
           onChange={(v) => setGroupBy(v as string)}
           options={[
             { value: "signal_type", label: "按信号类型" },
-            { value: "label", label: "按标签(仅live)" },
-            { value: "score_bucket", label: "按分数段(仅live)" },
+            { value: "label", label: "按标签（live）" },
+            { value: "score_bucket", label: "按分数段（live）" },
+            { value: "interval_quality", label: "By interval quality (live)" },
+            { value: "materiality", label: "By materiality (live)" },
           ]}
         />
         <Radio.Group value={source} onChange={(e) => setSource(e.target.value)}>
@@ -135,7 +139,7 @@ export default function Backtest() {
           onChange={(v) => setHorizon(v as number)}
           options={HORIZONS.map((h) => ({ value: h, label: `图表 +${h}d` }))}
         />
-        {summary && <Tag>共 {summary.total_signals} 个信号(实际统计口径 source={summary.source})</Tag>}
+        {summary && <Tag>共 {summary.total_signals} 个信号，实际统计口径 source={summary.source}</Tag>}
       </Space>
       {error && <Alert type="error" message={error} style={{ marginBottom: 12 }} />}
       {summary && (

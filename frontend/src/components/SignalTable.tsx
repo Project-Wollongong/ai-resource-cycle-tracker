@@ -15,10 +15,10 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 function ReturnCell({ ret }: { ret: SignalReturn | undefined }) {
-  if (!ret || ret.status === "pending") return <span style={{ color: "#999" }}>–</span>;
+  if (!ret || ret.status === "pending") return <span style={{ color: "#999" }}>-</span>;
   if (ret.status === "unavailable")
     return (
-      <Tooltip title="股票停牌/退市,无法回填">
+      <Tooltip title="股票停牌或退市，无法回填">
         <span style={{ color: "#999" }}>n/a</span>
       </Tooltip>
     );

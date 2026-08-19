@@ -1,9 +1,9 @@
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 
-from app.models import CommodityBar, PriceBar, Signal, SignalReturn, Stock
+from app.models import Announcement, CommodityBar, PriceBar, Signal, SignalReturn, Stock
 from app.services.backtest import backtest_summary, fill_pending_returns
 
 from conftest import next_weekday
@@ -47,6 +47,35 @@ def add_signal(session, stock, sig_date, signal_type="REL_VOL_SPIKE", source="li
         session.add(SignalReturn(signal_id=signal.id, horizon_days=h))
     session.commit()
     return signal
+
+
+def add_announcement(
+    session,
+    stock,
+    ann_id,
+    ann_date,
+    interval_quality_label,
+    materiality_label,
+):
+    announcement = Announcement(
+        stock_id=stock.id,
+        ann_id=ann_id,
+        headline=f"{ann_id} drilling update",
+        ann_date=datetime.combine(ann_date, datetime.min.time()),
+        ann_type="DRILLING",
+        ai_metrics=json.dumps(
+            {
+                "qualitative_context": {
+                    "interval_quality_label": interval_quality_label,
+                    "materiality_label": materiality_label,
+                    "qualitative_assessment": "test context",
+                }
+            }
+        ),
+    )
+    session.add(announcement)
+    session.commit()
+    return announcement
 
 
 def test_fill_uses_next_day_close_as_entry(db_session):
@@ -176,3 +205,65 @@ def test_label_grouping_excludes_replay(db_session):
     summary = backtest_summary(db_session, group_by="label", source="all")
     assert summary["source"] == "live"  # forced
     assert summary["total_signals"] == 0
+
+
+def test_qualitative_grouping_uses_announcement_context(db_session):
+    stock = add_stock(db_session)
+    d = date(2026, 3, 2)
+    add_announcement(db_session, stock, "A1", d, "strong", "high")
+    add_announcement(db_session, stock, "A2", d + timedelta(days=1), "weak", "low")
+
+    sig1 = add_signal(db_session, stock, d, signal_type="KEY_ANNOUNCEMENT", horizons=(5,))
+    sig1.evidence = json.dumps({"announcements": [{"ann_id": "A1"}]})
+    sig2 = add_signal(
+        db_session,
+        stock,
+        d + timedelta(days=1),
+        signal_type="KEY_ANNOUNCEMENT",
+        horizons=(5,),
+    )
+    sig2.evidence = json.dumps({"announcements": [{"ann_id": "A2"}]})
+    db_session.commit()
+
+    for signal, ret in ((sig1, 12.0), (sig2, -4.0)):
+        sr = db_session.query(SignalReturn).filter_by(signal_id=signal.id).one()
+        sr.status = "filled"
+        sr.return_pct = ret
+        sr.benchmark_return_pct = 1.0
+    db_session.commit()
+
+    quality_summary = backtest_summary(db_session, group_by="interval_quality", source="all")
+    assert quality_summary["source"] == "live"
+    quality_groups = {g["group"]: g for g in quality_summary["groups"]}
+    assert quality_groups["strong"]["cells"][0]["avg"] == pytest.approx(12.0)
+    assert quality_groups["weak"]["cells"][0]["avg_excess"] == pytest.approx(-5.0)
+
+    materiality_summary = backtest_summary(db_session, group_by="materiality", source="live")
+    materiality_groups = {g["group"]: g for g in materiality_summary["groups"]}
+    assert materiality_groups["high"]["cells"][0]["n"] == 1
+    assert materiality_groups["low"]["cells"][0]["avg"] == pytest.approx(-4.0)
+
+
+def test_qualitative_grouping_falls_back_to_same_day_and_no_context(db_session):
+    stock = add_stock(db_session)
+    d = date(2026, 3, 2)
+    add_announcement(db_session, stock, "A1", d, "moderate", "medium")
+
+    same_day_sig = add_signal(db_session, stock, d, signal_type="KEY_ANNOUNCEMENT", horizons=(5,))
+    no_context_sig = add_signal(
+        db_session,
+        stock,
+        d + timedelta(days=2),
+        signal_type="KEY_ANNOUNCEMENT",
+        horizons=(5,),
+    )
+    for signal in (same_day_sig, no_context_sig):
+        sr = db_session.query(SignalReturn).filter_by(signal_id=signal.id).one()
+        sr.status = "filled"
+        sr.return_pct = 3.0
+    db_session.commit()
+
+    summary = backtest_summary(db_session, group_by="interval_quality", source="live")
+    groups = {g["group"]: g for g in summary["groups"]}
+    assert groups["moderate"]["cells"][0]["n"] == 1
+    assert groups["no_context"]["cells"][0]["n"] == 1

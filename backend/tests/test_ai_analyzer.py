@@ -314,11 +314,14 @@ def test_sync_announcements_persists_qualitative_context(db_session):
     ann = db_session.query(Announcement).filter_by(ann_id="ann-new").one()
     metrics = json.loads(ann.ai_metrics)
     context = metrics["qualitative_context"]
+    assert metrics["qualitative_contexts"][0] == context
     assert context["grade_thickness"] == 45.0
+    assert context["company_percentile"] == 80.0
     assert context["project_percentile"] == 80.0
     assert context["trend_vs_previous"] == "improving"
     assert context["materiality_label"] == "high"
-    assert "company_percentile" not in context
+    assert context["company_history_count"] == 5
+    assert context["project_history_count"] == 5
 
 
 def json_dumps(value):

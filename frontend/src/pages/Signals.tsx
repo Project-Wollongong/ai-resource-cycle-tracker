@@ -42,17 +42,41 @@ export default function Signals() {
     <div>
       <Typography.Title level={4}>信号记录</Typography.Title>
       <Typography.Paragraph type="secondary">
-        每次信号都被永久留痕并追踪 +5/+20/+60/+120 交易日收益(入场价 = 信号后首个交易日收盘,无前视偏差)。
+        每次信号都会永久留痕，并追踪 +5/+20/+60/+120 交易日收益。入场价为信号后首个交易日收盘价，避免前视偏差。
       </Typography.Paragraph>
       <Space style={{ marginBottom: 12 }} wrap>
-        <Select allowClear placeholder="信号类型" style={{ width: 180 }} value={type} onChange={setType}
-          options={TYPES.map((t) => ({ value: t, label: t }))} />
-        <Select allowClear placeholder="标签" style={{ width: 150 }} value={label} onChange={setLabel}
-          options={LABELS.map((l) => ({ value: l, label: l }))} />
-        <Select allowClear placeholder="来源" style={{ width: 120 }} value={source} onChange={setSource}
-          options={[{ value: "live", label: "live" }, { value: "replay", label: "replay" }]} />
-        <Input placeholder="代码" style={{ width: 100 }} value={code} onChange={(e) => setCode(e.target.value)}
-          onPressEnter={load} allowClear />
+        <Select
+          allowClear
+          placeholder="信号类型"
+          style={{ width: 180 }}
+          value={type}
+          onChange={setType}
+          options={TYPES.map((t) => ({ value: t, label: t }))}
+        />
+        <Select
+          allowClear
+          placeholder="标签"
+          style={{ width: 150 }}
+          value={label}
+          onChange={setLabel}
+          options={LABELS.map((l) => ({ value: l, label: l }))}
+        />
+        <Select
+          allowClear
+          placeholder="来源"
+          style={{ width: 120 }}
+          value={source}
+          onChange={setSource}
+          options={[{ value: "live", label: "live" }, { value: "replay", label: "replay" }]}
+        />
+        <Input
+          placeholder="代码"
+          style={{ width: 100 }}
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          onPressEnter={load}
+          allowClear
+        />
       </Space>
       {error && <Alert type="error" message={error} style={{ marginBottom: 12 }} />}
       <SignalTable signals={signals} loading={loading} />

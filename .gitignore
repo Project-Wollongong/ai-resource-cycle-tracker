@@ -16,3 +16,5 @@ data/yfinance_cache/
 *.log
 ~$*
 *.tmp
+sprintworkings.md
+backend/requirements.txt

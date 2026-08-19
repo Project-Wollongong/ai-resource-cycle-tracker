@@ -75,6 +75,10 @@ def build_daily_report(session: Session, run_stats: dict | None = None) -> Daily
             "headline": ann.headline[:100],
             "price_sensitive": ann.price_sensitive,
             "url": ann.url,
+            "quality": _primary_context_value(ann.ai_metrics, "interval_quality_label"),
+            "materiality": _primary_context_value(ann.ai_metrics, "materiality_label"),
+            "assessment": _primary_context_value(ann.ai_metrics, "qualitative_assessment"),
+            "grade_thickness": _primary_context_value(ann.ai_metrics, "grade_thickness"),
         }
         for ann, stock in ann_rows
     ]
@@ -109,6 +113,24 @@ def build_daily_report(session: Session, run_stats: dict | None = None) -> Daily
     return report
 
 
+def _primary_context_value(raw_metrics: str | None, key: str):
+    context = _primary_qualitative_context(raw_metrics)
+    return context.get(key) if context else None
+
+
+def _primary_qualitative_context(raw_metrics: str | None) -> dict | None:
+    if not raw_metrics:
+        return None
+    try:
+        metrics = json.loads(raw_metrics)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(metrics, dict):
+        return None
+    context = metrics.get("qualitative_context")
+    return context if isinstance(context, dict) else None
+
+
 def render_telegram_html(content: dict) -> str:
     lines = [f"<b>AI Resource Cycle Tracker - {content['report_date']}</b>", ""]
 
@@ -138,6 +160,17 @@ def render_telegram_html(content: dict) -> str:
         for ann in content["announcements"]:
             ps = " [PS]" if ann["price_sensitive"] else ""
             lines.append(f"- {ann['code']} [{ann['type']}]{ps} {ann['headline']}")
+            context_bits = []
+            if ann.get("quality"):
+                context_bits.append(f"quality={ann['quality']}")
+            if ann.get("materiality"):
+                context_bits.append(f"materiality={ann['materiality']}")
+            if ann.get("grade_thickness") is not None:
+                context_bits.append(f"GT={ann['grade_thickness']}")
+            if context_bits:
+                lines.append("  " + ", ".join(context_bits))
+            if ann.get("assessment"):
+                lines.append(f"  {ann['assessment']}")
 
     if content["movers"]:
         lines.append("")

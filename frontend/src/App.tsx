@@ -34,7 +34,7 @@ export default function App() {
       <Sider theme="light" width={200}>
         <div style={{ padding: "18px 16px 8px" }}>
           <Typography.Title level={5} style={{ margin: 0 }}>
-            🛰️ Resource Cycle
+            Resource Cycle
           </Typography.Title>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             ASX 资源股投研雷达
@@ -56,8 +56,7 @@ export default function App() {
           </div>
         </Content>
         <Footer style={{ textAlign: "center", color: "#999", fontSize: 12 }}>
-          仅供研究参考,不构成投资建议 · Research only, not investment advice · Cycle Score
-          衡量的是"资源故事的市场共识强度",不是上涨概率
+          仅供研究参考，不构成投资建议 · Research only, not investment advice · Cycle Score 衡量的是资源故事的市场共识强度，不是上涨概率
         </Footer>
       </Layout>
     </Layout>

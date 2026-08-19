@@ -118,7 +118,7 @@ function WatchlistCard({ onChanged }: { onChanged: () => void }) {
       <Modal title="添加股票" open={adding} onOk={add} onCancel={() => setAdding(false)} destroyOnClose>
         <Form form={form} layout="vertical">
           <Form.Item name="code" label="ASX 代码" rules={[{ required: true }]}>
-            <Input placeholder="如 DYL" />
+            <Input placeholder="例如 DYL" />
           </Form.Item>
           <Form.Item name="name" label="公司名" rules={[{ required: true }]}>
             <Input />
@@ -261,9 +261,9 @@ function WeightCalibrationCard({
         <Space direction="vertical" size={12} style={{ width: "100%" }}>
           <Space wrap>
             <Tag>样本 {result.sample_size}</Tag>
-            {result.low_sample && <Tag color="warning">低样本, 保持当前权重</Tag>}
+            {result.low_sample && <Tag color="warning">低样本，保持当前权重</Tag>}
             <Typography.Text type="secondary">
-              推荐权重只作为建议; 点击应用后仍需保存参数才会生效。
+              推荐权重只作为建议，点击应用后仍需保存参数才会生效。
             </Typography.Text>
           </Space>
           <Space wrap>
@@ -339,7 +339,7 @@ function ConfigCard({ onSaved }: { onSaved: () => void }) {
 
   const applyRecommendedWeights = (weights: Record<string, number>) => {
     setConfig({ ...config, weights });
-    message.info("推荐权重已填入, 点击保存参数后生效");
+    message.info("推荐权重已填入，点击保存参数后生效");
   };
 
   const save = async () => {
@@ -352,7 +352,7 @@ function ConfigCard({ onSaved }: { onSaved: () => void }) {
         commodity_instruments: config.commodity_instruments,
         benchmark_instrument: config.benchmark_instrument,
       });
-      message.success("已保存,下次 pipeline 生效");
+      message.success("已保存，下次 pipeline 生效");
       await load();
       onSaved();
     } catch (e) {
@@ -364,7 +364,7 @@ function ConfigCard({ onSaved }: { onSaved: () => void }) {
 
   return (
     <Card size="small" title="评分与信号参数">
-      <Typography.Text strong>权重(需和为 1.0,当前 {weightSum.toFixed(2)})</Typography.Text>
+      <Typography.Text strong>权重（需合计为 1.0，当前 {weightSum.toFixed(2)}）</Typography.Text>
       <Space wrap style={{ margin: "8px 0 16px" }}>
         {Object.entries(config.weights).map(([k, v]) => (
           <span key={k}>
@@ -502,8 +502,68 @@ function OpsCard() {
   );
 }
 
+function AdminTokenCard({ onChanged }: { onChanged: () => void }) {
+  const [token, setToken] = useState(() => globalThis.localStorage?.getItem("adminApiToken") ?? "");
+
+  const save = () => {
+    const trimmed = token.trim();
+    if (trimmed) {
+      localStorage.setItem("adminApiToken", trimmed);
+      setToken(trimmed);
+      message.success("Admin token saved locally");
+      onChanged();
+    } else {
+      localStorage.removeItem("adminApiToken");
+      setToken("");
+      message.info("Admin token cleared");
+      onChanged();
+    }
+  };
+
+  const clear = () => {
+    localStorage.removeItem("adminApiToken");
+    setToken("");
+    message.info("Admin token cleared");
+    onChanged();
+  };
+
+  return (
+    <Card size="small" title="Admin API Token">
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 12 }}
+        message="Pipeline、replay、Telegram 测试和评分/配置编辑需要 backend/.env 中的 ADMIN_API_TOKEN。"
+      />
+      <Space.Compact style={{ width: "100%", maxWidth: 640 }}>
+        <Input.Password
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          placeholder="Paste ADMIN_API_TOKEN"
+          onPressEnter={save}
+        />
+        <Button type="primary" onClick={save}>
+          Save
+        </Button>
+        <Button onClick={clear}>Clear</Button>
+      </Space.Compact>
+      <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
+        Token 只保存在当前浏览器，并作为 X-Admin-Token 发送。
+      </Typography.Paragraph>
+    </Card>
+  );
+}
+
 export default function Settings() {
   const [tick, setTick] = useState(0);
+  const [hasAdminToken, setHasAdminToken] = useState(
+    () => !!globalThis.localStorage?.getItem("adminApiToken")?.trim(),
+  );
+  const refreshAdminTokenState = () => {
+    setHasAdminToken(!!localStorage.getItem("adminApiToken")?.trim());
+    setTick((t) => t + 1);
+  };
+
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
       <Typography.Title level={4} style={{ margin: 0 }}>
@@ -512,12 +572,20 @@ export default function Settings() {
       <Alert
         type="info"
         showIcon
-        message="Telegram 推送配置在 backend/.env(TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID),未配置时日报仍会生成并入库。"
+        message="Telegram 推送配置在 backend/.env（TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID），未配置时日报仍会生成并入库。"
       />
-      <OpsCard />
+      <AdminTokenCard onChanged={refreshAdminTokenState} />
+      {!hasAdminToken && (
+        <Alert
+          type="warning"
+          showIcon
+          message="输入并保存 ADMIN_API_TOKEN 后，才能使用 pipeline、replay、Telegram 测试和配置编辑。"
+        />
+      )}
+      {hasAdminToken && <OpsCard />}
       <WatchlistCard onChanged={() => setTick((t) => t + 1)} />
-      <ConfigCard onSaved={() => setTick((t) => t + 1)} />
-      <ConfigHistoryCard refreshKey={tick} />
+      {hasAdminToken && <ConfigCard onSaved={() => setTick((t) => t + 1)} />}
+      {hasAdminToken && <ConfigHistoryCard refreshKey={tick} />}
     </Space>
   );
 }
