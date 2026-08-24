@@ -10,11 +10,13 @@ from app.analysis.scoring import (
     LABEL_MONITOR,
     LABEL_WATCH,
     ScoredAnnouncement,
+    RiskAnnouncement,
     announcement_score,
     commodity_score,
     cycle_score,
     funding_score,
     label_for,
+    risk_score,
 )
 from app.models import Announcement, PriceBar, ScoreSnapshot, Stock
 from app.services.scoring_service import score_and_signal_stock
@@ -94,6 +96,52 @@ def test_funding_max_score_is_100():
     assert comps["consecutive_up"]["points"] == 15
     assert comps["vol_trend"]["points"] == 15
     assert score == 100.0
+
+
+# ---------- risk ----------
+
+def test_risk_score_penalizes_low_liquidity_and_recent_placement():
+    ind = ind_for([0.05] * 20 + [0.05], [100_000] * 20 + [100_000])
+    score, comps = risk_score(
+        ind,
+        [
+            RiskAnnouncement(
+                headline="Placement to raise capital",
+                ann_type="PLACEMENT",
+                ann_date=AS_OF - timedelta(days=3),
+                price_sensitive=False,
+            )
+        ],
+        THRESH,
+        AS_OF,
+    )
+
+    assert score == pytest.approx(12.0)
+    assert comps["liquidity_adjust"] == -20.0
+    assert comps["event_adjust"] == -18.0
+    assert comps["label"] == "elevated_risk"
+
+
+def test_risk_score_rewards_stronger_liquidity_without_events():
+    ind = ind_for([1.0] * 20 + [1.0], [100_000] * 20 + [1_500_000])
+    score, comps = risk_score(ind, [], THRESH, AS_OF)
+
+    assert score == 58.0
+    assert comps["liquidity_adjust"] == 8.0
+    assert comps["events"] == []
+
+
+def test_risk_score_caps_event_penalties():
+    ind = ind_for([1.0] * 20 + [1.0], [100_000] * 21)
+    events = [
+        RiskAnnouncement("Placement", "PLACEMENT", AS_OF, False),
+        RiskAnnouncement("Trading halt", "TRADING_HALT", AS_OF, True),
+        RiskAnnouncement("Voluntary suspension", "TRADING_HALT", AS_OF, True),
+    ]
+    score, comps = risk_score(ind, events, THRESH, AS_OF)
+
+    assert comps["event_adjust"] == -35.0
+    assert score == 15.0
 
 
 # ---------- announcement ----------
@@ -339,7 +387,7 @@ def test_default_weights_sum_to_one():
 
 def test_cycle_score_weighted_sum():
     score = cycle_score(100, 100, 50, 100, 50, DEFAULTS["weights"])
-    assert score == pytest.approx(87.5)  # max achievable with neutral R/Risk defaults
+    assert score == pytest.approx(85.0)
 
 
 @pytest.mark.parametrize(

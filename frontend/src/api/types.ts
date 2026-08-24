@@ -5,6 +5,7 @@ export interface ScoreBrief {
   resource_score: number;
   commodity_score: number;
   risk_score: number;
+  sentiment_score: number;
   cycle_score: number;
   label: string;
   components?: Record<string, unknown> | null;
@@ -134,6 +135,13 @@ export interface BacktestSummary {
 
 export interface ReportContent {
   report_date: string;
+  daily_review?: {
+    top_priority: DailyReviewItem[];
+    new_story: DailyReviewItem[];
+    market_confirmation: DailyReviewItem[];
+    rising_fast: DailyReviewItem[];
+    risk_alert: DailyReviewItem[];
+  };
   top: {
     code: string;
     name: string;
@@ -157,6 +165,26 @@ export interface ReportContent {
   movers: { code: string; day_change_pct: number }[];
   source_degraded: string[];
   disclaimer: string;
+}
+
+export interface DailyReviewItem {
+  code: string;
+  name: string;
+  commodity: string;
+  stage: string;
+  cycle_score: number;
+  label: string;
+  score_change: number | null;
+  day_change_pct: number | null;
+  announcement_score: number;
+  funding_score: number;
+  commodity_score: number;
+  risk_score: number;
+  risk_severity: number;
+  reasons: string[];
+  watch_next: string[];
+  headline?: string;
+  announcement_type?: string;
 }
 
 export interface DailyReport {

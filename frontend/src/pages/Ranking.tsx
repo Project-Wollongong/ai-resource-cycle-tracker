@@ -25,8 +25,16 @@ function SubScores({ s }: { s: StockWithScore }) {
     ["R", s.latest_score.resource_score],
     ["C", s.latest_score.commodity_score],
     ["K", s.latest_score.risk_score],
+    ["S", s.latest_score.sentiment_score],
   ];
-  const names = ["Funding 35%", "Announcement 30%", "Resource 20%", "Commodity 10%", "Risk 5%"];
+  const names = [
+    "Funding confirmation (not in Cycle Score)",
+    "Announcement 40%",
+    "Resource 20%",
+    "Commodity 20%",
+    "Risk 10%",
+    "Sentiment 10%",
+  ];
   return (
     <Space size={6}>
       {parts.map(([k, v], i) => (

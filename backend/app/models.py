@@ -99,6 +99,7 @@ class ScoreSnapshot(Base):
     resource_score: Mapped[float] = mapped_column(Float)
     commodity_score: Mapped[float] = mapped_column(Float)
     risk_score: Mapped[float] = mapped_column(Float)
+    sentiment_score: Mapped[float] = mapped_column(Float, default=50.0)
     cycle_score: Mapped[float] = mapped_column(Float)
     label: Mapped[str] = mapped_column(String(20))
     components: Mapped[str] = mapped_column(Text, default="{}")  # JSON: per-sub-score explanation

@@ -9,6 +9,7 @@ const SERIES: { key: keyof ScoreBrief; name: string; color: string; selected: bo
   { key: "resource_score", name: "Resource", color: "#8c8c8c", selected: false },
   { key: "commodity_score", name: "Commodity", color: "#faad14", selected: false },
   { key: "risk_score", name: "Risk", color: "#52c41a", selected: false },
+  { key: "sentiment_score", name: "Sentiment", color: "#13c2c2", selected: false },
 ];
 
 export default function ScoreHistoryChart({ scores }: { scores: ScoreBrief[] }) {

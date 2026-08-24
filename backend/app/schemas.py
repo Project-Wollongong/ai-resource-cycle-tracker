@@ -38,6 +38,7 @@ class ScoreBrief(BaseModel):
     resource_score: float
     commodity_score: float
     risk_score: float
+    sentiment_score: float
     cycle_score: float
     label: str
     components: dict[str, Any] | None = None

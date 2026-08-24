@@ -3,11 +3,45 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { api } from "../api/client";
-import type { DailyReport, ReportContent } from "../api/types";
+import type { DailyReport, DailyReviewItem, ReportContent } from "../api/types";
 import LabelTag from "../components/LabelTag";
 import Pct from "../components/Pct";
 
 type ReportAnnouncement = ReportContent["announcements"][number];
+type ReviewKey = keyof NonNullable<ReportContent["daily_review"]>;
+
+const REVIEW_SECTIONS: { key: ReviewKey; title: string; description: string; color: string }[] = [
+  {
+    key: "top_priority",
+    title: "Top Priority",
+    description: "Highest-priority stories by current Cycle Score.",
+    color: "red",
+  },
+  {
+    key: "new_story",
+    title: "New Story",
+    description: "Fresh announcements that may change the company story.",
+    color: "blue",
+  },
+  {
+    key: "market_confirmation",
+    title: "Market Confirmation",
+    description: "Volume, breakout, or funding-score evidence that capital is reacting.",
+    color: "purple",
+  },
+  {
+    key: "rising_fast",
+    title: "Rising Fast",
+    description: "Cycle Score has moved up sharply versus the previous snapshot.",
+    color: "green",
+  },
+  {
+    key: "risk_alert",
+    title: "Risk Alert",
+    description: "Liquidity, halt, financing, or other observable risk deserves manual review.",
+    color: "orange",
+  },
+];
 
 export default function Reports() {
   const [reports, setReports] = useState<DailyReport[]>([]);
@@ -63,6 +97,7 @@ export default function Reports() {
               {content.source_degraded.length > 0 && (
                 <Alert type="warning" message={`Announcement source degraded: ${content.source_degraded.join(", ")}`} />
               )}
+              {content.daily_review && <DailyReviewSections review={content.daily_review} />}
               <Card size="small" title="Top Cycle Scores">
                 <List
                   size="small"
@@ -140,6 +175,89 @@ export default function Reports() {
         </Col>
       </Row>
     </div>
+  );
+}
+
+function DailyReviewSections({ review }: { review: NonNullable<ReportContent["daily_review"]> }) {
+  return (
+    <Card
+      size="small"
+      title="Daily Review"
+      extra={<Typography.Text type="secondary">What deserves attention today</Typography.Text>}
+    >
+      <Row gutter={[12, 12]}>
+        {REVIEW_SECTIONS.map((section) => {
+          const items = review[section.key] ?? [];
+          return (
+            <Col span={section.key === "top_priority" || section.key === "new_story" ? 12 : 8} key={section.key}>
+              <Card
+                size="small"
+                type="inner"
+                title={
+                  <Space>
+                    <Tag color={section.color}>{section.title}</Tag>
+                    <Typography.Text type="secondary">{items.length}</Typography.Text>
+                  </Space>
+                }
+              >
+                <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
+                  {section.description}
+                </Typography.Paragraph>
+                {items.length ? (
+                  <List
+                    size="small"
+                    dataSource={items}
+                    renderItem={(item) => (
+                      <List.Item>
+                        <DailyReviewItemRow item={item} />
+                      </List.Item>
+                    )}
+                  />
+                ) : (
+                  <Typography.Text type="secondary">No items today</Typography.Text>
+                )}
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+    </Card>
+  );
+}
+
+function DailyReviewItemRow({ item }: { item: DailyReviewItem }) {
+  return (
+    <Space direction="vertical" size={4} style={{ width: "100%" }}>
+      <Space wrap>
+        <Link to={`/stocks/${item.code}`}>
+          <b>{item.code}</b>
+        </Link>
+        <span>{item.name}</span>
+        <Tag>{item.commodity}</Tag>
+        <b>{item.cycle_score}</b>
+        <LabelTag label={item.label} />
+        {item.score_change != null && (
+          <Tag color={item.score_change >= 0 ? "green" : "red"}>{item.score_change >= 0 ? "+" : ""}{item.score_change}</Tag>
+        )}
+        <Pct value={item.day_change_pct} />
+      </Space>
+      {item.headline && (
+        <Typography.Text type="secondary">
+          {item.announcement_type ? `[${item.announcement_type}] ` : ""}
+          {item.headline}
+        </Typography.Text>
+      )}
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        {item.reasons.slice(0, 2).map((reason) => (
+          <li key={reason}>
+            <Typography.Text>{reason}</Typography.Text>
+          </li>
+        ))}
+      </ul>
+      {item.watch_next.length > 0 && (
+        <Typography.Text type="secondary">Watch next: {item.watch_next[0]}</Typography.Text>
+      )}
+    </Space>
   );
 }
 

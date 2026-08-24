@@ -33,3 +33,14 @@ def init_db() -> None:
     from . import models  # noqa: F401  (register mappings)
 
     Base.metadata.create_all(engine)
+    _apply_lightweight_migrations()
+
+
+def _apply_lightweight_migrations() -> None:
+    """Keep local SQLite databases compatible with small additive schema changes."""
+    with engine.begin() as conn:
+        columns = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(score_snapshots)")}
+        if "sentiment_score" not in columns:
+            conn.exec_driver_sql(
+                "ALTER TABLE score_snapshots ADD COLUMN sentiment_score FLOAT NOT NULL DEFAULT 50.0"
+            )

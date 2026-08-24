@@ -8,11 +8,14 @@ from sqlalchemy.orm import Session
 from ..analysis.indicators import DailyBar, compute_indicators
 from ..analysis.scoring import (
     ScoredAnnouncement,
+    RiskAnnouncement,
     announcement_score,
     commodity_score,
     cycle_score,
     funding_score,
     label_for,
+    risk_score,
+    sentiment_score,
 )
 from ..analysis.signals import (
     AnnouncementEvent,
@@ -26,6 +29,7 @@ from .signal_service import persist_signals
 ANNOUNCEMENT_LOOKBACK_DAYS = 30
 RESOURCE_CONTEXT_LOOKBACK_DAYS = 365
 RESOURCE_CONTEXT_MAX_ITEMS = 8
+RISK_LOOKBACK_DAYS = 90
 
 
 def load_bars(session: Session, stock: Stock) -> list[DailyBar]:
@@ -90,11 +94,37 @@ def score_and_signal_stock(
         }
     else:
         resource, resource_comp = _resource_score_from_contexts(session, stock, eval_date)
-    risk = stock.risk_score_override if stock.risk_score_override is not None else 50.0
-    risk_comp = {
-        "value": risk,
-        "source": "manual_override" if stock.risk_score_override is not None else "neutral_default",
-    }
+    if stock.risk_score_override is not None:
+        risk = stock.risk_score_override
+        risk_comp = {
+            "value": risk,
+            "source": "manual_override",
+        }
+    else:
+        risk_rows = (
+            session.query(Announcement)
+            .filter(
+                Announcement.stock_id == stock.id,
+                Announcement.ann_date
+                >= datetime.combine(eval_date - timedelta(days=RISK_LOOKBACK_DAYS), datetime.min.time()),
+            )
+            .order_by(Announcement.ann_date.desc())
+            .all()
+        )
+        risk, risk_comp = risk_score(
+            ind,
+            [
+                RiskAnnouncement(
+                    headline=a.headline,
+                    ann_type=a.ann_type,
+                    ann_date=a.ann_date.date(),
+                    price_sensitive=a.price_sensitive,
+                )
+                for a in risk_rows
+            ],
+            thresholds,
+            eval_date,
+        )
 
     instrument = commodity_map.get(stock.commodity)
     closes = []
@@ -108,7 +138,9 @@ def score_and_signal_stock(
     commodity, commodity_comp = commodity_score(closes, eval_date)
     commodity_comp["instrument"] = instrument
 
-    total = cycle_score(funding, announcement, resource, commodity, risk, weights)
+    sentiment, sentiment_comp = sentiment_score()
+
+    total = cycle_score(announcement, resource, commodity, risk, sentiment, weights)
     label = label_for(total, label_thresholds)
 
     prev_snap = (
@@ -120,11 +152,16 @@ def score_and_signal_stock(
 
     components = json.dumps(
         {
-            "funding": funding_comp,
+            "funding": {
+                **funding_comp,
+                "role": "funding_confirmation",
+                "included_in_cycle_score": False,
+            },
             "announcement": ann_comp,
             "resource": resource_comp,
             "commodity": commodity_comp,
             "risk": risk_comp,
+            "sentiment": sentiment_comp,
             "weights": weights,
         }
     )
@@ -141,6 +178,7 @@ def score_and_signal_stock(
     snapshot.resource_score = resource
     snapshot.commodity_score = commodity
     snapshot.risk_score = risk
+    snapshot.sentiment_score = sentiment
     snapshot.cycle_score = total
     snapshot.label = label
     snapshot.components = components

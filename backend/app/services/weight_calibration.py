@@ -16,11 +16,11 @@ from ..models import ScoreSnapshot, Signal, SignalReturn
 from .config_service import DEFAULTS, get_config
 
 SUBSCORES = (
-    ("funding", "funding_score"),
     ("announcement", "announcement_score"),
     ("resource", "resource_score"),
     ("commodity", "commodity_score"),
     ("risk", "risk_score"),
+    ("sentiment", "sentiment_score"),
 )
 MIN_SAMPLE = 10
 MIN_WEIGHT = 0.03

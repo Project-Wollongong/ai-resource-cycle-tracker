@@ -57,6 +57,35 @@ interface ResourceComponent {
   items?: ResourceContextItem[];
 }
 
+interface SentimentComponent {
+  value?: number;
+  source?: string;
+  label?: string;
+  note?: string;
+}
+
+interface RiskComponent {
+  value?: number;
+  source?: string;
+  label?: string;
+  note?: string;
+  liquidity_adjust?: number;
+  event_adjust?: number;
+  liquidity?: {
+    dollar_turnover?: number;
+    min_dollar_turnover?: number;
+    label?: string;
+  };
+  events?: {
+    headline: string;
+    type: string;
+    age_days: number;
+    price_sensitive: boolean;
+    adjustment: number;
+    reason: string;
+  }[];
+}
+
 /** Renders the persisted components JSON: the explainability contract. */
 export default function ScoreBreakdown({ score }: { score: ScoreBrief }) {
   const comps = (score.components ?? {}) as Record<string, unknown>;
@@ -74,7 +103,8 @@ export default function ScoreBreakdown({ score }: { score: ScoreBrief }) {
     note?: string;
   };
   const resource = (comps.resource ?? {}) as ResourceComponent;
-  const risk = (comps.risk ?? {}) as { value?: number; source?: string };
+  const risk = (comps.risk ?? {}) as RiskComponent;
+  const sentiment = (comps.sentiment ?? {}) as SentimentComponent;
 
   const fundingRow = (name: string, c?: FundingComponent, extra?: string) =>
     c ? (
@@ -101,6 +131,10 @@ export default function ScoreBreakdown({ score }: { score: ScoreBrief }) {
   return (
     <Descriptions column={1} size="small" bordered>
       <Descriptions.Item label={`Funding ${score.funding_score.toFixed(0)}`}>
+        <div>
+          <Tag color="purple">Funding confirmation</Tag>
+          <Text type="secondary">Tracked separately; not included in Cycle Score.</Text>
+        </div>
         {fundingRow(
           "Relative volume",
           funding.rel_vol,
@@ -159,11 +193,61 @@ export default function ScoreBreakdown({ score }: { score: ScoreBrief }) {
         )}
       </Descriptions.Item>
       <Descriptions.Item label={`Risk ${score.risk_score.toFixed(0)}`}>
+        <RiskBreakdown risk={risk} />
+      </Descriptions.Item>
+      <Descriptions.Item label={`Sentiment ${score.sentiment_score.toFixed(0)}`}>
         <Text type="secondary">
-          {risk.source === "manual_override" ? "Manual override. Higher is safer." : "Neutral default 50."}
+          {sentiment.source === "neutral_default"
+            ? "Neutral default 50. Forum/social sentiment ingestion is not enabled yet."
+            : `${sentiment.label ?? "sentiment"} (${sentiment.source ?? "unknown source"})`}
         </Text>
+        {sentiment.label && <Tag style={{ marginLeft: 6 }}>{sentiment.label}</Tag>}
       </Descriptions.Item>
     </Descriptions>
+  );
+}
+
+function RiskBreakdown({ risk }: { risk: RiskComponent }) {
+  if (risk.source === "manual_override") {
+    return <Text type="secondary">Manual override. Higher is safer.</Text>;
+  }
+  if (risk.source !== "rules_v1") {
+    return <Text type="secondary">Neutral default 50.</Text>;
+  }
+
+  return (
+    <div>
+      <div>
+        <Tag color={risk.label === "elevated_risk" ? "red" : risk.label === "watch_risk" ? "orange" : "green"}>
+          {risk.label ?? "neutral"}
+        </Tag>
+        <Tag>liquidity {risk.liquidity_adjust ?? 0}</Tag>
+        <Tag>events {risk.event_adjust ?? 0}</Tag>
+        {risk.liquidity?.label && <Tag>{risk.liquidity.label}</Tag>}
+      </div>
+      {risk.liquidity && (
+        <div>
+          <Text type="secondary">
+            Turnover A${((risk.liquidity.dollar_turnover ?? 0) / 1000).toFixed(0)}k; floor A$
+            {((risk.liquidity.min_dollar_turnover ?? 0) / 1000).toFixed(0)}k.
+          </Text>
+        </div>
+      )}
+      {(risk.events ?? []).slice(0, 4).map((event) => (
+        <div key={`${event.type}-${event.headline}`} style={{ marginTop: 4 }}>
+          <Tag color="volcano">{event.adjustment}</Tag>
+          <Tag>{event.type}</Tag>
+          <Text type="secondary">
+            {event.age_days}d ago: {event.reason}. {event.headline}
+          </Text>
+        </div>
+      ))}
+      {risk.note && (
+        <div>
+          <Text type="secondary">{risk.note}</Text>
+        </div>
+      )}
+    </div>
   );
 }
 

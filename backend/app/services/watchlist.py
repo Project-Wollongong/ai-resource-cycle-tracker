@@ -43,6 +43,7 @@ def build_stock_view(session: Session, stock: Stock, include_components: bool = 
             resource_score=snap.resource_score,
             commodity_score=snap.commodity_score,
             risk_score=snap.risk_score,
+            sentiment_score=snap.sentiment_score,
             cycle_score=snap.cycle_score,
             label=snap.label,
             components=json.loads(snap.components) if include_components else None,

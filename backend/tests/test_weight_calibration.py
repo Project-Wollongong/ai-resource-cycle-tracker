@@ -3,13 +3,24 @@ from datetime import date, timedelta
 import pytest
 
 from app.models import ScoreSnapshot, SignalReturn
-from app.services.config_service import set_config
+from app.services.config_service import DEFAULTS, set_config
 from app.services.weight_calibration import calibrate_weights
 
 from test_backtest import add_signal, add_stock
 
 
-def add_snapshot(session, stock, d, funding, announcement, resource=50, commodity=50, risk=50):
+def add_snapshot(
+    session,
+    stock,
+    d,
+    funding=50,
+    announcement=50,
+    resource=50,
+    commodity=50,
+    risk=50,
+    sentiment=50,
+):
+    weights = DEFAULTS["weights"]
     session.add(
         ScoreSnapshot(
             stock_id=stock.id,
@@ -19,7 +30,14 @@ def add_snapshot(session, stock, d, funding, announcement, resource=50, commodit
             resource_score=resource,
             commodity_score=commodity,
             risk_score=risk,
-            cycle_score=0.35 * funding + 0.30 * announcement + 0.20 * resource + 0.10 * commodity + 0.05 * risk,
+            sentiment_score=sentiment,
+            cycle_score=(
+                weights["announcement"] * announcement
+                + weights["resource"] * resource
+                + weights["commodity"] * commodity
+                + weights["risk"] * risk
+                + weights["sentiment"] * sentiment
+            ),
             label="Monitor",
             components="{}",
         )
@@ -42,9 +60,9 @@ def test_weight_calibration_recommends_predictive_subscore(db_session):
 
     for i in range(12):
         d = start + timedelta(days=i)
-        funding = 10 + i * 7
+        sentiment = 10 + i * 7
         announcement = 80 - i * 3
-        add_snapshot(db_session, stock, d, funding=funding, announcement=announcement)
+        add_snapshot(db_session, stock, d, sentiment=sentiment, announcement=announcement)
         sig = add_signal(
             db_session,
             stock,
@@ -53,25 +71,32 @@ def test_weight_calibration_recommends_predictive_subscore(db_session):
             cycle_score=50,
             horizons=(20,),
         )
-        # Funding intentionally predicts the target; announcement moves the other way.
+        # Sentiment intentionally predicts the target; announcement moves the other way.
         fill_signal_return(db_session, sig, ret=i * 2.0, bench=0.0)
 
     result = calibrate_weights(db_session, horizon_days=20, target="excess", min_sample=10)
 
     assert result["sample_size"] == 12
     assert result["low_sample"] is False
-    assert result["recommended_weights"]["funding"] > result["current_weights"]["funding"]
+    assert result["recommended_weights"]["sentiment"] > result["current_weights"]["sentiment"]
     assert result["recommended_weights"]["announcement"] < result["current_weights"]["announcement"]
     assert sum(result["recommended_weights"].values()) == pytest.approx(1.0)
-    funding_diag = next(d for d in result["diagnostics"] if d["subscore"] == "funding")
-    assert funding_diag["correlation"] > 0.99
+    sentiment_diag = next(d for d in result["diagnostics"] if d["subscore"] == "sentiment")
+    assert sentiment_diag["correlation"] > 0.99
 
 
 def test_weight_calibration_keeps_current_weights_on_low_sample(db_session):
     stock = add_stock(db_session)
-    set_config(db_session, "weights", {"funding": 0.4, "announcement": 0.25, "resource": 0.2, "commodity": 0.1, "risk": 0.05})
+    current_weights = {
+        "announcement": 0.35,
+        "resource": 0.2,
+        "commodity": 0.2,
+        "risk": 0.1,
+        "sentiment": 0.15,
+    }
+    set_config(db_session, "weights", current_weights)
     d = date(2026, 1, 5)
-    add_snapshot(db_session, stock, d, funding=90, announcement=20)
+    add_snapshot(db_session, stock, d, sentiment=90, announcement=20)
     sig = add_signal(db_session, stock, d, horizons=(20,))
     fill_signal_return(db_session, sig, ret=10, bench=1)
 

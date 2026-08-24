@@ -53,15 +53,46 @@ def _seed_report_inputs(db_session) -> Stock:
             ),
             ScoreSnapshot(
                 stock_id=stock.id,
+                date=date(2026, 7, 29),
+                funding_score=20,
+                announcement_score=10,
+                resource_score=50,
+                commodity_score=55,
+                risk_score=50,
+                cycle_score=48.5,
+                label="Ignore",
+                components="{}",
+            ),
+            ScoreSnapshot(
+                stock_id=stock.id,
                 date=REPORT_DATE,
                 funding_score=80,
                 announcement_score=70,
                 resource_score=50,
                 commodity_score=55,
                 risk_score=50,
+                sentiment_score=50,
                 cycle_score=68.5,
                 label="Watch Closely",
-                components="{}",
+                components=json.dumps(
+                    {
+                        "funding": {
+                            "rel_vol": {
+                                "value": 2.5,
+                                "dollar_turnover": 220_000,
+                            }
+                        },
+                        "announcement": {
+                            "announcements": [
+                                {
+                                    "headline": "High-grade drill results",
+                                    "type": "DRILL_RESULTS",
+                                }
+                            ]
+                        },
+                        "risk": {"events": []},
+                    }
+                ),
             ),
             Signal(
                 stock_id=stock.id,
@@ -128,8 +159,13 @@ def test_build_daily_report_persists_expected_sections(db_session):
     assert content["announcements"][0]["grade_thickness"] == 45.0
     assert content["announcements"][0]["assessment"] == "Strong relative to stored project history."
     assert content["source_degraded"] == ["BLK"]
+    assert content["daily_review"]["new_story"][0]["code"] == "TST"
+    assert content["daily_review"]["new_story"][0]["announcement_type"] == "DRILL_RESULTS"
+    assert content["daily_review"]["market_confirmation"][0]["code"] == "TST"
+    assert content["daily_review"]["rising_fast"][0]["score_change"] == 20.0
     assert "Research only" in content["disclaimer"]
     assert report.content_text == render_telegram_html(content)
+    assert "Daily Review" in report.content_text
     assert "quality=strong" in report.content_text
     assert "materiality=high" in report.content_text
     assert "Strong relative to stored project history." in report.content_text

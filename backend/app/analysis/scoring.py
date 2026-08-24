@@ -101,6 +101,14 @@ class ScoredAnnouncement:
     qualitative_assessment: str | None = None
 
 
+@dataclass(frozen=True)
+class RiskAnnouncement:
+    headline: str
+    ann_type: str
+    ann_date: date
+    price_sensitive: bool = False
+
+
 def _decay(age_days: int) -> float:
     if age_days <= 3:
         return 1.0
@@ -206,18 +214,130 @@ def commodity_score(closes: Sequence[tuple[date, float]], as_of: date) -> tuple[
     }
 
 
+# ---------- Risk Score (0-100, higher is safer) ----------
+
+def risk_score(
+    ind: IndicatorResult,
+    announcements: Sequence[RiskAnnouncement],
+    thresholds: dict,
+    as_of: date,
+) -> tuple[float, dict]:
+    """Observable first-pass risk score.
+
+    This is deliberately conservative: it uses only data already stored by the
+    system. It does not infer cash runway, debt, or dilution terms unless those
+    fields are explicitly extracted in a later module.
+    """
+
+    base = 50.0
+    liquidity_adjust, liquidity_comp = _liquidity_risk_adjustment(ind, thresholds)
+    event_items = []
+    event_adjust = 0.0
+
+    for ann in announcements:
+        age = (as_of - ann.ann_date).days
+        if age < 0 or age > 90:
+            continue
+        adjustment, reason = _risk_event_adjustment(ann, age)
+        if adjustment == 0:
+            continue
+        event_adjust += adjustment
+        event_items.append(
+            {
+                "headline": ann.headline[:100],
+                "type": ann.ann_type,
+                "age_days": age,
+                "price_sensitive": ann.price_sensitive,
+                "adjustment": adjustment,
+                "reason": reason,
+            }
+        )
+
+    # Event penalties are capped so one noisy announcement cluster does not
+    # dominate the whole Cycle Score before proper cash/dilution parsing exists.
+    event_adjust = max(-35.0, min(5.0, event_adjust))
+    score = clamp(base + liquidity_adjust + event_adjust)
+    label = "elevated_risk" if score < 40 else "watch_risk" if score < 50 else "neutral"
+
+    return round(score, 1), {
+        "value": round(score, 1),
+        "source": "rules_v1",
+        "label": label,
+        "base": base,
+        "liquidity_adjust": liquidity_adjust,
+        "event_adjust": event_adjust,
+        "liquidity": liquidity_comp,
+        "events": event_items,
+        "note": "cash runway and dilution terms are not parsed yet",
+    }
+
+
+def _liquidity_risk_adjustment(ind: IndicatorResult, thresholds: dict) -> tuple[float, dict]:
+    min_turnover = float(thresholds.get("min_dollar_turnover", 50_000))
+    turnover = ind.dollar_turnover
+    if turnover < min_turnover * 0.2:
+        adjustment, label = -20.0, "very_low_liquidity"
+    elif turnover < min_turnover:
+        adjustment, label = -12.0, "low_liquidity"
+    elif turnover >= min_turnover * 20:
+        adjustment, label = 8.0, "strong_liquidity"
+    elif turnover >= min_turnover * 5:
+        adjustment, label = 4.0, "adequate_liquidity"
+    else:
+        adjustment, label = 0.0, "minimum_liquidity_met"
+    return adjustment, {
+        "dollar_turnover": round(turnover),
+        "min_dollar_turnover": min_turnover,
+        "label": label,
+    }
+
+
+def _risk_event_adjustment(ann: RiskAnnouncement, age_days: int) -> tuple[float, str]:
+    ann_type = (ann.ann_type or "").upper()
+    headline = (ann.headline or "").lower()
+    recency = 1.0 if age_days <= 14 else 0.65 if age_days <= 45 else 0.35
+
+    if ann_type == "PLACEMENT":
+        return round(-18.0 * recency, 1), "recent capital raising / dilution risk"
+    if ann_type == "TRADING_HALT":
+        penalty = -16.0 if "suspension" in headline else -10.0
+        return round(penalty * recency, 1), "trading halt or suspension uncertainty"
+    if ann_type == "SUBSTANTIAL_HOLDER" and "ceasing" in headline:
+        return round(-8.0 * recency, 1), "substantial holder ceasing notice"
+    if ann_type == "QUARTERLY" and ("appendix 5b" in headline or "cash" in headline):
+        return 0.0, "quarterly cash report requires cash-runway extraction"
+    return 0.0, ""
+
+
+# ---------- Sentiment Score (0-100) ----------
+
+def sentiment_score() -> tuple[float, dict]:
+    """Neutral placeholder until forum/social data collection is wired.
+
+    Missing sentiment data is not bearish. It simply means the system has no
+    evidence yet, so the score stays neutral and the components say why.
+    """
+
+    return 50.0, {
+        "value": 50.0,
+        "source": "neutral_default",
+        "label": "insufficient_data",
+        "note": "forum/social sentiment ingestion is not enabled yet",
+    }
+
+
 # ---------- composition ----------
 
 def cycle_score(
-    funding: float, announcement: float, resource: float, commodity: float, risk: float,
+    announcement: float, resource: float, commodity: float, risk: float, sentiment: float,
     weights: dict,
 ) -> float:
     return (
-        weights["funding"] * funding
-        + weights["announcement"] * announcement
+        weights["announcement"] * announcement
         + weights["resource"] * resource
         + weights["commodity"] * commodity
         + weights["risk"] * risk
+        + weights["sentiment"] * sentiment
     )
 
 

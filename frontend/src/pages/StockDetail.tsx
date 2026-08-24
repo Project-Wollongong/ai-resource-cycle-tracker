@@ -24,6 +24,7 @@ import QualitativeContextPanel from "../components/QualitativeContextPanel";
 import ScoreBreakdown from "../components/ScoreBreakdown";
 import ScoreHistoryChart from "../components/ScoreHistoryChart";
 import SignalTable from "../components/SignalTable";
+import StoryCard from "../components/StoryCard";
 
 const QUALITY_FILTERS = ["exceptional", "strong", "moderate", "weak", "insufficient_history"].map((value) => ({
   text: value.replaceAll("_", " "),
@@ -120,6 +121,8 @@ export default function StockDetail() {
           <Link to="/">返回雷达</Link>
         </Space>
       </Card>
+
+      <StoryCard stock={stock} announcements={announcements} signals={signals} />
 
       <Card size="small" title="价格 / 成交量 / 信号点标注">
         <PriceVolumeChart bars={bars} signals={signals} />

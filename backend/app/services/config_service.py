@@ -13,11 +13,11 @@ from ..models import AppConfig, AppConfigHistory
 
 DEFAULTS: dict[str, Any] = {
     "weights": {
-        "funding": 0.35,
-        "announcement": 0.30,
+        "announcement": 0.40,
         "resource": 0.20,
-        "commodity": 0.10,
-        "risk": 0.05,
+        "commodity": 0.20,
+        "risk": 0.10,
+        "sentiment": 0.10,
     },
     "label_thresholds": {  # score >= threshold, checked from high to low
         "high_priority": 75,
@@ -56,9 +56,22 @@ DESCRIPTIONS = {
 
 def ensure_defaults(session: Session) -> None:
     for key, value in DEFAULTS.items():
-        if session.get(AppConfig, key) is None:
+        row = session.get(AppConfig, key)
+        if row is None:
             session.add(
                 AppConfig(key=key, value=json.dumps(value), description=DESCRIPTIONS.get(key, ""))
+            )
+        elif key == "weights" and set(json.loads(row.value)) != set(DEFAULTS["weights"]):
+            old_value = row.value
+            row.value = json.dumps(value)
+            session.add(
+                AppConfigHistory(
+                    key=key,
+                    old_value=old_value,
+                    new_value=row.value,
+                    changed_by="system",
+                    source="startup:migrate_weights_v2",
+                )
             )
     session.commit()
 

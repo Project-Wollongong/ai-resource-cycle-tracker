@@ -128,6 +128,7 @@ def stock_scores(code: str, days: int = 90, db: Session = Depends(get_db)):
             resource_score=r.resource_score,
             commodity_score=r.commodity_score,
             risk_score=r.risk_score,
+            sentiment_score=r.sentiment_score,
             cycle_score=r.cycle_score,
             label=r.label,
             components=json.loads(r.components or "{}"),
