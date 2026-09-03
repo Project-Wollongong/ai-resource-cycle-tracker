@@ -106,6 +106,70 @@ class ScoreSnapshot(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class HistoricalAnalysisSnapshot(Base):
+    __tablename__ = "historical_analysis_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "stock_id",
+            "as_of_date",
+            "input_hash",
+            name="uq_historical_snapshot_stock_asof_input",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), index=True)
+    as_of_date: Mapped[date] = mapped_column(Date, index=True)
+    as_of_cutoff: Mapped[datetime] = mapped_column(DateTime)
+    market_data_as_of: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    run_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+    mode: Mapped[str] = mapped_column(String(20), default="approximate")
+    status: Mapped[str] = mapped_column(String(20), default="success")
+    boundary_status: Mapped[str] = mapped_column(String(20), default="approximate")
+    data_warnings: Mapped[str] = mapped_column(Text, default="[]")  # JSON list
+    input_hash: Mapped[str] = mapped_column(String(64), index=True)
+    input_summary: Mapped[str] = mapped_column(Text, default="{}")  # JSON
+    funding_score: Mapped[float] = mapped_column(Float)
+    announcement_score: Mapped[float] = mapped_column(Float)
+    resource_score: Mapped[float] = mapped_column(Float)
+    commodity_score: Mapped[float] = mapped_column(Float)
+    risk_score: Mapped[float] = mapped_column(Float)
+    sentiment_score: Mapped[float] = mapped_column(Float, default=50.0)
+    cycle_score: Mapped[float] = mapped_column(Float)
+    label: Mapped[str] = mapped_column(String(20))
+    components: Mapped[str] = mapped_column(Text, default="{}")  # JSON
+    ai_reason: Mapped[str] = mapped_column(Text, default="")
+    config_snapshot: Mapped[str] = mapped_column(Text, default="{}")  # JSON
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class HistoricalAnalysisReturn(Base):
+    __tablename__ = "historical_analysis_returns"
+    __table_args__ = (
+        UniqueConstraint(
+            "snapshot_id",
+            "horizon_days",
+            name="uq_historical_return_snapshot_horizon",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    snapshot_id: Mapped[int] = mapped_column(
+        ForeignKey("historical_analysis_snapshots.id"),
+        index=True,
+    )
+    horizon_days: Mapped[int] = mapped_column(Integer)
+    entry_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    entry_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    exit_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    exit_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    return_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    benchmark_return_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_drawdown_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    status: Mapped[str] = mapped_column(String(15), default="pending")
+    filled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class Signal(Base):
     __tablename__ = "signals"
     __table_args__ = (UniqueConstraint("stock_id", "date", "signal_type", name="uq_signal_stock_date_type"),)

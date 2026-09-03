@@ -240,3 +240,44 @@ export interface WeightCalibration {
   diagnostics: WeightCalibrationDiagnostic[];
   method: string;
 }
+
+export interface HistoricalAnalysisReturn {
+  horizon_days: number;
+  entry_date: string | null;
+  entry_price: number | null;
+  exit_date: string | null;
+  exit_price: number | null;
+  return_pct: number | null;
+  benchmark_return_pct: number | null;
+  max_drawdown_pct: number | null;
+  status: "pending" | "filled" | "unavailable";
+}
+
+export interface HistoricalAnalysisSnapshot {
+  id: number;
+  code: string;
+  stock_name: string;
+  as_of_date: string;
+  as_of_cutoff: string;
+  market_data_as_of: string | null;
+  run_at: string;
+  mode: "strict" | "approximate";
+  status: string;
+  boundary_status: string;
+  data_warnings: string[];
+  input_hash: string;
+  input_summary: Record<string, unknown>;
+  funding_score: number;
+  announcement_score: number;
+  resource_score: number;
+  commodity_score: number;
+  risk_score: number;
+  sentiment_score: number;
+  cycle_score: number;
+  label: string;
+  components: Record<string, unknown>;
+  ai_reason: string;
+  config_snapshot: Record<string, unknown>;
+  returns: HistoricalAnalysisReturn[];
+  created_at: string;
+}

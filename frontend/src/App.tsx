@@ -2,6 +2,7 @@ import {
   BellOutlined,
   ExperimentOutlined,
   FileTextOutlined,
+  FundProjectionScreenOutlined,
   RadarChartOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
@@ -9,6 +10,7 @@ import { Layout, Menu, Typography } from "antd";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 
 import Backtest from "./pages/Backtest";
+import HistoricalAnalysis from "./pages/HistoricalAnalysis";
 import Ranking from "./pages/Ranking";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
@@ -18,6 +20,7 @@ import StockDetail from "./pages/StockDetail";
 const { Sider, Content, Footer } = Layout;
 
 const MENU = [
+  { key: "/historical-analysis", icon: <FundProjectionScreenOutlined />, label: <Link to="/historical-analysis">历史验证</Link> },
   { key: "/", icon: <RadarChartOutlined />, label: <Link to="/">雷达排名</Link> },
   { key: "/signals", icon: <BellOutlined />, label: <Link to="/signals">信号记录</Link> },
   { key: "/backtest", icon: <ExperimentOutlined />, label: <Link to="/backtest">回测</Link> },
@@ -50,6 +53,7 @@ export default function App() {
               <Route path="/stocks/:code" element={<StockDetail />} />
               <Route path="/signals" element={<Signals />} />
               <Route path="/backtest" element={<Backtest />} />
+              <Route path="/historical-analysis" element={<HistoricalAnalysis />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>

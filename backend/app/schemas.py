@@ -162,6 +162,55 @@ class WeightCalibrationOut(BaseModel):
     method: str
 
 
+# ---------- historical analysis ----------
+
+class HistoricalAnalysisRunIn(BaseModel):
+    code: str
+    as_of_date: date
+    mode: str = "approximate"
+
+
+class HistoricalAnalysisReturnOut(BaseModel):
+    horizon_days: int
+    entry_date: date | None
+    entry_price: float | None
+    exit_date: date | None
+    exit_price: float | None
+    return_pct: float | None
+    benchmark_return_pct: float | None
+    max_drawdown_pct: float | None
+    status: str
+
+
+class HistoricalAnalysisSnapshotOut(BaseModel):
+    id: int
+    code: str
+    stock_name: str
+    as_of_date: date
+    as_of_cutoff: datetime
+    market_data_as_of: date | None
+    run_at: datetime
+    mode: str
+    status: str
+    boundary_status: str
+    data_warnings: list[str]
+    input_hash: str
+    input_summary: dict[str, Any]
+    funding_score: float
+    announcement_score: float
+    resource_score: float
+    commodity_score: float
+    risk_score: float
+    sentiment_score: float
+    cycle_score: float
+    label: str
+    components: dict[str, Any]
+    ai_reason: str
+    config_snapshot: dict[str, Any]
+    returns: list[HistoricalAnalysisReturnOut] = []
+    created_at: datetime
+
+
 # ---------- reports & admin ----------
 
 class DailyReportOut(BaseModel):

@@ -44,3 +44,9 @@ def _apply_lightweight_migrations() -> None:
             conn.exec_driver_sql(
                 "ALTER TABLE score_snapshots ADD COLUMN sentiment_score FLOAT NOT NULL DEFAULT 50.0"
             )
+        from .models import HistoricalAnalysisSnapshot
+
+        HistoricalAnalysisSnapshot.__table__.create(bind=conn, checkfirst=True)
+        from .models import HistoricalAnalysisReturn
+
+        HistoricalAnalysisReturn.__table__.create(bind=conn, checkfirst=True)

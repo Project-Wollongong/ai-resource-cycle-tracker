@@ -9,6 +9,7 @@ from .api.routes import (
     backtest,
     config as config_routes,
     health,
+    historical_analysis,
     reports,
     signals,
     stocks,
@@ -43,5 +44,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for module in (health, stocks, signals, announcements, backtest, reports, config_routes, admin):
+for module in (
+    health,
+    stocks,
+    signals,
+    announcements,
+    backtest,
+    reports,
+    historical_analysis,
+    config_routes,
+    admin,
+):
     app.include_router(module.router, prefix="/api")
