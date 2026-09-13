@@ -18,7 +18,7 @@ from app.analysis.scoring import (
     label_for,
     risk_score,
 )
-from app.models import Announcement, PriceBar, ScoreSnapshot, Stock
+from app.models import Announcement, AnalyticalSignal, AttentionState, FusionRecord, PriceBar, ScoreSnapshot, Stock, TradeDecision
 from app.services.scoring_service import score_and_signal_stock
 from app.services.config_service import DEFAULTS
 
@@ -282,6 +282,8 @@ def test_score_snapshot_announcement_components_include_qualitative_context(db_s
     snapshot = db_session.query(ScoreSnapshot).filter_by(stock_id=stock.id, date=eval_date).one()
     components = json.loads(snapshot.components)
     ann_item = components["announcement"]["announcements"][0]
+    assert ann_item["ann_id"] == "ann-context"
+    assert ann_item["url"] == "https://example.com/ann.pdf"
     assert ann_item["qualitative_bonus"] == 8.0
     assert ann_item["interval_quality_label"] == "strong"
     assert ann_item["materiality_label"] == "high"
@@ -352,6 +354,91 @@ def test_manual_resource_override_still_wins_over_qualitative_context(db_session
     components = json.loads(snapshot.components)
     assert snapshot.resource_score == 62.0
     assert components["resource"] == {"value": 62.0, "source": "manual_override"}
+
+
+def test_score_and_signal_stock_writes_p5_p6_compat_records_idempotently(db_session):
+    stock = Stock(code="P56", name="P56 Resources", commodity="gold")
+    db_session.add(stock)
+    db_session.commit()
+
+    bars = make_bars([1.0] * 20 + [1.08], [100_000] * 20 + [400_000])
+    for bar in bars:
+        db_session.add(
+            PriceBar(
+                stock_id=stock.id,
+                date=bar.date,
+                open=bar.open,
+                high=bar.high,
+                low=bar.low,
+                close=bar.close,
+                volume=bar.volume,
+            )
+        )
+    eval_date = bars[-1].date
+    db_session.add(
+        Announcement(
+            stock_id=stock.id,
+            ann_id="p56-drill",
+            headline="High-grade drilling results",
+            ann_date=datetime.combine(eval_date, datetime.min.time()),
+            url="https://example.com/p56.pdf",
+            price_sensitive=True,
+            ann_type="DRILL_RESULTS",
+            type_score=85,
+            matched_keywords="[]",
+            raw_payload="{}",
+            ai_metrics=json.dumps(
+                {
+                    "qualitative_context": {
+                        "interval_quality_label": "strong",
+                        "materiality_label": "high",
+                        "trend_vs_previous": "improving",
+                        "depth_category": "shallow",
+                        "project_percentile": 80,
+                        "grade_thickness": 88.0,
+                    }
+                }
+            ),
+        )
+    )
+    db_session.commit()
+
+    for _ in range(2):
+        score_and_signal_stock(
+            db_session,
+            stock,
+            thresholds=DEFAULTS["signal_thresholds"],
+            weights=DEFAULTS["weights"],
+            label_thresholds=DEFAULTS["label_thresholds"],
+            commodity_map={},
+        )
+
+    analytical = db_session.query(AnalyticalSignal).filter_by(stock_id=stock.id).all()
+    assert sorted({row.engine for row in analytical}) == ["catalyst", "fundamental", "technical"]
+    assert len(analytical) == 3
+    assert {row.logic_version for row in analytical} == {"cycle_score_adapter_v1"}
+    assert any(row.dependency_group == "announcement:p56-drill" for row in analytical)
+
+    fusion = db_session.query(FusionRecord).filter_by(stock_id=stock.id, fusion_date=eval_date).one()
+    assert fusion.rule_version == "fusion_adapter_v1"
+    assert fusion.opportunity_strength in {"moderate", "strong", "exceptional"}
+    assert fusion.signal_structure == "confirmation"
+    assert json.loads(fusion.analytical_signal_ids_json) == [row.id for row in analytical]
+
+    attention = db_session.query(AttentionState).filter_by(stock_id=stock.id, ended_at=None).one()
+    assert attention.state_level == "L3"
+    assert attention.state_label == "Investigation"
+    assert attention.transition == "upgrade"
+    assert attention.compute_profile == "deep_investigation"
+    metadata = json.loads(attention.metadata_json)
+    assert metadata["recommended_state"] == "L4"
+    assert metadata["human_review_required"] is True
+
+    decision = db_session.query(TradeDecision).filter_by(stock_id=stock.id, decision_date=eval_date).one()
+    assert decision.decision == "wait"
+    assert decision.action == "none"
+    assert decision.attention_state_id == attention.id
+    assert decision.fusion_record_id == fusion.id
 
 
 # ---------- commodity ----------

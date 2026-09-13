@@ -281,3 +281,88 @@ export interface HistoricalAnalysisSnapshot {
   returns: HistoricalAnalysisReturn[];
   created_at: string;
 }
+
+export interface PositionEvent {
+  id: number;
+  event_time: string;
+  event_type: string;
+  action: string;
+  price: number | null;
+  quantity_delta: number | null;
+  thesis_status: string | null;
+  catalyst_status: string | null;
+  risk_status: string | null;
+  reason: string;
+  evidence: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+}
+
+export interface Position {
+  id: number;
+  code: string;
+  stock_name: string;
+  commodity: string;
+  trade_decision_id: number | null;
+  status: "open" | "closed";
+  opened_at: string;
+  closed_at: string | null;
+  entry_price: number;
+  quantity: number;
+  current_price: number | null;
+  market_value: number | null;
+  unrealized_pnl_pct: number | null;
+  thesis_status: string;
+  catalyst_status: string;
+  risk_status: string;
+  suggested_action: string;
+  price_stop: number | null;
+  thesis_stop: string[];
+  target_logic: Record<string, unknown>;
+  original_thesis: Record<string, unknown>;
+  thesis_delta: Record<string, unknown>;
+  strategy_profile: string;
+  metadata: Record<string, unknown>;
+  events: PositionEvent[];
+}
+
+export interface StrategyLearningCandidate {
+  id: number;
+  trade_review_id: number;
+  code: string;
+  candidate_type: string;
+  target_layer: string;
+  title: string;
+  rationale: string;
+  evidence: Record<string, unknown>;
+  status: string;
+  requires_backtest: boolean;
+  requires_human_approval: boolean;
+  approved_at: string | null;
+  applied_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface TradeReview {
+  id: number;
+  position_id: number;
+  code: string;
+  stock_name: string;
+  opened_at: string;
+  closed_at: string;
+  entry_price: number;
+  exit_price: number;
+  return_pct: number;
+  outcome_quality: string;
+  decision_quality: string;
+  thesis_review: Record<string, unknown>;
+  signal_review: Record<string, unknown>;
+  decision_review: Record<string, unknown>;
+  position_management_review: Record<string, unknown>;
+  outcome_attribution: Record<string, unknown>;
+  state_transition_review: Record<string, unknown>;
+  review_version: string;
+  metadata: Record<string, unknown>;
+  learning_candidates: StrategyLearningCandidate[];
+  created_at: string;
+}

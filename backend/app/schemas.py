@@ -211,6 +211,111 @@ class HistoricalAnalysisSnapshotOut(BaseModel):
     created_at: datetime
 
 
+# ---------- positions ----------
+
+class PositionOpenIn(BaseModel):
+    code: str
+    entry_price: float
+    quantity: float
+    opened_at: datetime | None = None
+    trade_decision_id: int | None = None
+    strategy_profile: str = "balanced"
+    original_thesis: dict[str, Any] | None = None
+
+
+class PositionCloseIn(BaseModel):
+    exit_price: float
+    closed_at: datetime | None = None
+    reason: str = "User closed the position."
+
+
+class PositionEventOut(BaseModel):
+    id: int
+    event_time: datetime
+    event_type: str
+    action: str
+    price: float | None
+    quantity_delta: float | None
+    thesis_status: str | None
+    catalyst_status: str | None
+    risk_status: str | None
+    reason: str
+    evidence: dict[str, Any]
+    metadata: dict[str, Any]
+
+
+class PositionOut(BaseModel):
+    id: int
+    code: str
+    stock_name: str
+    commodity: str
+    trade_decision_id: int | None
+    status: str
+    opened_at: datetime
+    closed_at: datetime | None
+    entry_price: float
+    quantity: float
+    current_price: float | None
+    market_value: float | None
+    unrealized_pnl_pct: float | None
+    thesis_status: str
+    catalyst_status: str
+    risk_status: str
+    suggested_action: str
+    price_stop: float | None
+    thesis_stop: list[str]
+    target_logic: dict[str, Any]
+    original_thesis: dict[str, Any]
+    thesis_delta: dict[str, Any]
+    strategy_profile: str
+    metadata: dict[str, Any]
+    events: list[PositionEventOut] = []
+
+
+# ---------- trade reviews ----------
+
+class StrategyLearningCandidateOut(BaseModel):
+    id: int
+    trade_review_id: int
+    code: str
+    candidate_type: str
+    target_layer: str
+    title: str
+    rationale: str
+    evidence: dict[str, Any]
+    status: str
+    requires_backtest: bool
+    requires_human_approval: bool
+    approved_at: datetime | None
+    applied_at: datetime | None
+    metadata: dict[str, Any]
+    created_at: datetime
+
+
+class TradeReviewOut(BaseModel):
+    id: int
+    position_id: int
+    code: str
+    stock_name: str
+    opened_at: datetime
+    closed_at: datetime
+    entry_price: float
+    exit_price: float
+    return_pct: float
+    outcome_quality: str
+    decision_quality: str
+    thesis_review: dict[str, Any]
+    signal_review: dict[str, Any]
+    decision_review: dict[str, Any]
+    position_management_review: dict[str, Any]
+    outcome_attribution: dict[str, Any]
+    state_transition_review: dict[str, Any]
+    review_version: str
+    metadata: dict[str, Any]
+    learning_candidates: list[StrategyLearningCandidateOut] = []
+    created_at: datetime
+
+
 # ---------- reports & admin ----------
 
 class DailyReportOut(BaseModel):

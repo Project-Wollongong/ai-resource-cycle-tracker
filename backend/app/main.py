@@ -10,13 +10,16 @@ from .api.routes import (
     config as config_routes,
     health,
     historical_analysis,
+    positions,
     reports,
     signals,
     stocks,
+    trade_reviews,
 )
 from .config import settings
 from .database import SessionLocal, init_db
 from .services.config_service import ensure_defaults
+from .services.startup_refresh import start_startup_refresh
 
 
 @asynccontextmanager
@@ -24,6 +27,7 @@ async def lifespan(app: FastAPI):
     init_db()
     with SessionLocal() as session:
         ensure_defaults(session)
+    start_startup_refresh()
     scheduler = None
     if settings.enable_scheduler:
         from .scheduler import start_scheduler
@@ -52,7 +56,9 @@ for module in (
     backtest,
     reports,
     historical_analysis,
+    positions,
     config_routes,
     admin,
+    trade_reviews,
 ):
     app.include_router(module.router, prefix="/api")

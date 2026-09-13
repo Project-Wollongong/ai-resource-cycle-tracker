@@ -23,8 +23,9 @@ from ..analysis.signals import (
     detect_price_signals,
     detect_score_cross,
 )
-from ..models import Announcement, CommodityBar, PriceBar, ScoreSnapshot, Stock
+from ..models import Announcement, CommodityBar, PriceBar, ScoreSnapshot, Signal, Stock
 from .signal_service import persist_signals
+from .p5_p6_adapter import write_p5_p6_compat_records
 
 ANNOUNCEMENT_LOOKBACK_DAYS = 30
 RESOURCE_CONTEXT_LOOKBACK_DAYS = 365
@@ -80,6 +81,9 @@ def score_and_signal_stock(
             type_score=a.type_score,
             ann_date=a.ann_date.date(),
             price_sensitive=a.price_sensitive,
+            ann_id=a.ann_id,
+            url=a.url,
+            ai_summary=a.ai_summary,
             **_qualitative_context_for_score(a.ai_metrics),
         )
         for a in ann_rows
@@ -222,6 +226,13 @@ def score_and_signal_stock(
         label=label,
         cycle_score=total,
     )
+    day_signals = (
+        session.query(Signal)
+        .filter_by(stock_id=stock.id, date=eval_date, source="live")
+        .order_by(Signal.id)
+        .all()
+    )
+    write_p5_p6_compat_records(session, stock, snapshot, day_signals)
     return {
         "signals": added,
         "eval_date": eval_date.isoformat(),

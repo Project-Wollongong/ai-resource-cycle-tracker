@@ -50,3 +50,37 @@ def _apply_lightweight_migrations() -> None:
         from .models import HistoricalAnalysisReturn
 
         HistoricalAnalysisReturn.__table__.create(bind=conn, checkfirst=True)
+        from .models import (
+            AnalyticalSignal,
+            AttentionState,
+            EvidenceDocument,
+            FusionRecord,
+            P3Fact,
+            P3Statement,
+            P4Feature,
+            Position,
+            PositionEvent,
+            Project,
+            StrategyLearningCandidate,
+            StockProject,
+            TradeDecision,
+            TradeReview,
+        )
+
+        for table in (
+            Project,
+            StockProject,
+            EvidenceDocument,
+            P3Fact,
+            P3Statement,
+            P4Feature,
+            AnalyticalSignal,
+            FusionRecord,
+            AttentionState,
+            TradeDecision,
+            Position,
+            PositionEvent,
+            TradeReview,
+            StrategyLearningCandidate,
+        ):
+            table.__table__.create(bind=conn, checkfirst=True)

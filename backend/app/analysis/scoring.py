@@ -95,6 +95,9 @@ class ScoredAnnouncement:
     type_score: float
     ann_date: date
     price_sensitive: bool
+    ann_id: str | None = None
+    url: str | None = None
+    ai_summary: str | None = None
     interval_quality_label: str | None = None
     materiality_label: str | None = None
     grade_thickness: float | None = None
@@ -143,8 +146,11 @@ def announcement_score(
         effective = adjusted_base * decay * (1.2 if ann.price_sensitive else 1.0)
         items.append(
             {
+                "ann_id": ann.ann_id,
                 "headline": ann.headline[:100],
                 "type": ann.ann_type,
+                "url": ann.url,
+                "ai_summary": ann.ai_summary,
                 "base": ann.type_score,
                 "qualitative_bonus": qualitative_bonus,
                 "adjusted_base": adjusted_base,

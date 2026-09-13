@@ -35,6 +35,43 @@ class Stock(Base):
     price_bars: Mapped[list["PriceBar"]] = relationship(back_populates="stock", cascade="all, delete-orphan")
     announcements: Mapped[list["Announcement"]] = relationship(back_populates="stock", cascade="all, delete-orphan")
     signals: Mapped[list["Signal"]] = relationship(back_populates="stock", cascade="all, delete-orphan")
+    project_links: Mapped[list["StockProject"]] = relationship(back_populates="stock", cascade="all, delete-orphan")
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_key: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(160))
+    commodity: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    region: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    jurisdiction: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    stage: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    stock_links: Mapped[list["StockProject"]] = relationship(back_populates="project", cascade="all, delete-orphan")
+
+
+class StockProject(Base):
+    __tablename__ = "stock_projects"
+    __table_args__ = (UniqueConstraint("stock_id", "project_id", name="uq_stock_project"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), index=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    relationship_type: Mapped[str] = mapped_column(String(40), default="owner")
+    ownership_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    effective_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    effective_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    stock: Mapped[Stock] = relationship(back_populates="project_links")
+    project: Mapped[Project] = relationship(back_populates="stock_links")
 
 
 class PriceBar(Base):
@@ -85,6 +122,82 @@ class Announcement(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     stock: Mapped[Stock] = relationship(back_populates="announcements")
+
+
+class EvidenceDocument(Base):
+    __tablename__ = "evidence_documents"
+    __table_args__ = (UniqueConstraint("source_type", "source_id", name="uq_evidence_source"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    stock_id: Mapped[int | None] = mapped_column(ForeignKey("stocks.id"), nullable=True, index=True)
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True, index=True)
+    announcement_id: Mapped[int | None] = mapped_column(ForeignKey("announcements.id"), nullable=True, index=True)
+    source_type: Mapped[str] = mapped_column(String(40))
+    source_id: Mapped[str] = mapped_column(String(120))
+    title: Mapped[str] = mapped_column(Text, default="")
+    document_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    url: Mapped[str] = mapped_column(Text, default="")
+    raw_storage_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_text_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_hash: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class P3Fact(Base):
+    __tablename__ = "p3_facts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    evidence_document_id: Mapped[int] = mapped_column(ForeignKey("evidence_documents.id"), index=True)
+    stock_id: Mapped[int | None] = mapped_column(ForeignKey("stocks.id"), nullable=True, index=True)
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True, index=True)
+    fact_type: Mapped[str] = mapped_column(String(60), index=True)
+    schema_name: Mapped[str] = mapped_column(String(80), default="generic")
+    field_name: Mapped[str] = mapped_column(String(80), index=True)
+    value_json: Mapped[str] = mapped_column(Text)
+    unit: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    extractor_version: Mapped[str] = mapped_column(String(80), default="manual_v1")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class P3Statement(Base):
+    __tablename__ = "p3_statements"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    evidence_document_id: Mapped[int] = mapped_column(ForeignKey("evidence_documents.id"), index=True)
+    stock_id: Mapped[int | None] = mapped_column(ForeignKey("stocks.id"), nullable=True, index=True)
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True, index=True)
+    statement_type: Mapped[str] = mapped_column(String(60), index=True)
+    statement_text: Mapped[str] = mapped_column(Text)
+    source_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    extractor_version: Mapped[str] = mapped_column(String(80), default="manual_v1")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class P4Feature(Base):
+    __tablename__ = "p4_features"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    stock_id: Mapped[int | None] = mapped_column(ForeignKey("stocks.id"), nullable=True, index=True)
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True, index=True)
+    evidence_document_id: Mapped[int | None] = mapped_column(ForeignKey("evidence_documents.id"), nullable=True, index=True)
+    as_of_date: Mapped[date] = mapped_column(Date, index=True)
+    feature_group: Mapped[str] = mapped_column(String(60), index=True)
+    feature_name: Mapped[str] = mapped_column(String(80), index=True)
+    value_json: Mapped[str] = mapped_column(Text)
+    unit: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    input_refs_json: Mapped[str] = mapped_column(Text, default="[]")
+    evidence_json: Mapped[str] = mapped_column(Text, default="{}")
+    formula_version: Mapped[str] = mapped_column(String(80), default="manual_v1")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
 class ScoreSnapshot(Base):
@@ -188,6 +301,199 @@ class Signal(Base):
 
     stock: Mapped[Stock] = relationship(back_populates="signals")
     returns: Mapped[list["SignalReturn"]] = relationship(back_populates="signal", cascade="all, delete-orphan")
+
+
+class AnalyticalSignal(Base):
+    __tablename__ = "analytical_signals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), index=True)
+    engine: Mapped[str] = mapped_column(String(30), index=True)  # fundamental/technical/sentiment/catalyst
+    signal_date: Mapped[date] = mapped_column(Date, index=True)
+    direction: Mapped[str] = mapped_column(String(20))
+    magnitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    persistence: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    source_event_id: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
+    dependency_group: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
+    evidence_ids_json: Mapped[str] = mapped_column(Text, default="[]")
+    feature_ids_json: Mapped[str] = mapped_column(Text, default="[]")
+    key_drivers_json: Mapped[str] = mapped_column(Text, default="[]")
+    key_risks_json: Mapped[str] = mapped_column(Text, default="[]")
+    logic_version: Mapped[str] = mapped_column(String(80), default="manual_v1")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class FusionRecord(Base):
+    __tablename__ = "fusion_records"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), index=True)
+    fusion_date: Mapped[date] = mapped_column(Date, index=True)
+    opportunity_strength: Mapped[str] = mapped_column(String(30))
+    confidence: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    signal_structure: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    evidence_independence: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    dominant_drivers_json: Mapped[str] = mapped_column(Text, default="[]")
+    conflicts_json: Mapped[str] = mapped_column(Text, default="[]")
+    blocking_conditions_json: Mapped[str] = mapped_column(Text, default="[]")
+    overheating_risk: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    official_result: Mapped[str] = mapped_column(String(30))
+    shadow_result: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    conflict_flag: Mapped[bool] = mapped_column(Boolean, default=False)
+    human_review_required: Mapped[bool] = mapped_column(Boolean, default=False)
+    analytical_signal_ids_json: Mapped[str] = mapped_column(Text, default="[]")
+    rule_version: Mapped[str] = mapped_column(String(80), default="manual_v1")
+    model_version: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class AttentionState(Base):
+    __tablename__ = "attention_states"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), index=True)
+    fusion_record_id: Mapped[int | None] = mapped_column(ForeignKey("fusion_records.id"), nullable=True, index=True)
+    state_level: Mapped[str] = mapped_column(String(2), index=True)  # L0-L5
+    state_label: Mapped[str] = mapped_column(String(40))
+    previous_state_level: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    transition: Mapped[str] = mapped_column(String(20), default="hold")
+    reason: Mapped[str] = mapped_column(Text, default="")
+    manual_lock: Mapped[bool] = mapped_column(Boolean, default=False)
+    manual_override: Mapped[bool] = mapped_column(Boolean, default=False)
+    pinned_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    compute_profile: Mapped[str] = mapped_column(String(40), default="standard")
+    alert_priority: Mapped[str] = mapped_column(String(30), default="dashboard")
+    rule_version: Mapped[str] = mapped_column(String(80), default="manual_v1")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    effective_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class TradeDecision(Base):
+    __tablename__ = "trade_decisions"
+    __table_args__ = (UniqueConstraint("stock_id", "decision_date", "rule_version", name="uq_trade_decision_stock_date_rule"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), index=True)
+    fusion_record_id: Mapped[int | None] = mapped_column(ForeignKey("fusion_records.id"), nullable=True, index=True)
+    attention_state_id: Mapped[int | None] = mapped_column(ForeignKey("attention_states.id"), nullable=True, index=True)
+    decision_date: Mapped[date] = mapped_column(Date, index=True)
+    decision: Mapped[str] = mapped_column(String(20))  # act/wait/pass
+    action: Mapped[str] = mapped_column(String(30))  # none/starter_buy/buy
+    conviction: Mapped[str] = mapped_column(String(20), default="low")
+    reason: Mapped[str] = mapped_column(Text, default="")
+    entry_logic: Mapped[str] = mapped_column(Text, default="")
+    entry_range_json: Mapped[str] = mapped_column(Text, default="{}")
+    position_size_json: Mapped[str] = mapped_column(Text, default="{}")
+    add_trigger_json: Mapped[str] = mapped_column(Text, default="[]")
+    invalidation_json: Mapped[str] = mapped_column(Text, default="[]")
+    target_logic_json: Mapped[str] = mapped_column(Text, default="{}")
+    key_risks_json: Mapped[str] = mapped_column(Text, default="[]")
+    review_trigger_json: Mapped[str] = mapped_column(Text, default="[]")
+    strategy_profile: Mapped[str] = mapped_column(String(40), default="balanced")
+    rule_version: Mapped[str] = mapped_column(String(80), default="manual_v1")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Position(Base):
+    __tablename__ = "positions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), index=True)
+    trade_decision_id: Mapped[int | None] = mapped_column(ForeignKey("trade_decisions.id"), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(20), default="open", index=True)  # open/closed
+    opened_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    entry_price: Mapped[float] = mapped_column(Float)
+    quantity: Mapped[float] = mapped_column(Float)
+    current_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    thesis_status: Mapped[str] = mapped_column(String(30), default="intact")
+    catalyst_status: Mapped[str] = mapped_column(String(30), default="on_track")
+    risk_status: Mapped[str] = mapped_column(String(30), default="normal")
+    suggested_action: Mapped[str] = mapped_column(String(20), default="hold")
+    price_stop: Mapped[float | None] = mapped_column(Float, nullable=True)
+    thesis_stop_json: Mapped[str] = mapped_column(Text, default="[]")
+    target_logic_json: Mapped[str] = mapped_column(Text, default="{}")
+    original_thesis_json: Mapped[str] = mapped_column(Text, default="{}")
+    thesis_delta_json: Mapped[str] = mapped_column(Text, default="{}")
+    strategy_profile: Mapped[str] = mapped_column(String(40), default="balanced")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    events: Mapped[list["PositionEvent"]] = relationship(back_populates="position", cascade="all, delete-orphan")
+
+
+class PositionEvent(Base):
+    __tablename__ = "position_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    position_id: Mapped[int] = mapped_column(ForeignKey("positions.id"), index=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), index=True)
+    trade_decision_id: Mapped[int | None] = mapped_column(ForeignKey("trade_decisions.id"), nullable=True, index=True)
+    event_time: Mapped[datetime] = mapped_column(DateTime, index=True)
+    event_type: Mapped[str] = mapped_column(String(30), index=True)
+    action: Mapped[str] = mapped_column(String(30), default="hold")
+    price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    quantity_delta: Mapped[float | None] = mapped_column(Float, nullable=True)
+    thesis_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    catalyst_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    risk_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    evidence_json: Mapped[str] = mapped_column(Text, default="{}")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    position: Mapped[Position] = relationship(back_populates="events")
+
+
+class TradeReview(Base):
+    __tablename__ = "trade_reviews"
+    __table_args__ = (UniqueConstraint("position_id", "review_version", name="uq_trade_review_position_version"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    position_id: Mapped[int] = mapped_column(ForeignKey("positions.id"), index=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), index=True)
+    opened_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    closed_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    entry_price: Mapped[float] = mapped_column(Float)
+    exit_price: Mapped[float] = mapped_column(Float)
+    return_pct: Mapped[float] = mapped_column(Float)
+    outcome_quality: Mapped[str] = mapped_column(String(30))
+    decision_quality: Mapped[str] = mapped_column(String(30))
+    thesis_review_json: Mapped[str] = mapped_column(Text, default="{}")
+    signal_review_json: Mapped[str] = mapped_column(Text, default="{}")
+    decision_review_json: Mapped[str] = mapped_column(Text, default="{}")
+    position_management_review_json: Mapped[str] = mapped_column(Text, default="{}")
+    outcome_attribution_json: Mapped[str] = mapped_column(Text, default="{}")
+    state_transition_review_json: Mapped[str] = mapped_column(Text, default="{}")
+    review_version: Mapped[str] = mapped_column(String(80), default="manual_v1")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class StrategyLearningCandidate(Base):
+    __tablename__ = "strategy_learning_candidates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trade_review_id: Mapped[int] = mapped_column(ForeignKey("trade_reviews.id"), index=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), index=True)
+    candidate_type: Mapped[str] = mapped_column(String(40), index=True)  # observation/hypothesis/change_candidate
+    target_layer: Mapped[str] = mapped_column(String(20), index=True)  # P3-P9
+    title: Mapped[str] = mapped_column(String(160))
+    rationale: Mapped[str] = mapped_column(Text, default="")
+    evidence_json: Mapped[str] = mapped_column(Text, default="{}")
+    status: Mapped[str] = mapped_column(String(30), default="proposed", index=True)
+    requires_backtest: Mapped[bool] = mapped_column(Boolean, default=True)
+    requires_human_approval: Mapped[bool] = mapped_column(Boolean, default=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
 class SignalReturn(Base):

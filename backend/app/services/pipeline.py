@@ -11,6 +11,7 @@ import logging
 import random
 import time
 from datetime import datetime
+from threading import Lock
 
 from ..analysis.ai_stub import get_analyzer
 from ..config import settings
@@ -25,9 +26,24 @@ from .report import build_daily_report, push_daily_report
 from .scoring_service import score_and_signal_stock
 
 logger = logging.getLogger(__name__)
+_pipeline_lock = Lock()
 
 
 def run_daily_pipeline(trigger: str = "manual") -> dict:
+    if not _pipeline_lock.acquire(blocking=False):
+        logger.info("pipeline skipped for trigger=%s because another run is active", trigger)
+        return {
+            "skipped": True,
+            "reason": "pipeline_already_running",
+            "trigger": trigger,
+        }
+    try:
+        return _run_daily_pipeline_unlocked(trigger)
+    finally:
+        _pipeline_lock.release()
+
+
+def _run_daily_pipeline_unlocked(trigger: str) -> dict:
     started = time.time()
     with SessionLocal() as session:
         ensure_defaults(session)
