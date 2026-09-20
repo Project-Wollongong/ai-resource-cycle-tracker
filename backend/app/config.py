@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     ohlcv_backfill_days: int = 500
 
     # scheduler (Australia/Sydney, after ASX 16:00 close)
+    enable_startup_refresh: bool = False
     enable_scheduler: bool = False
     schedule_hour: int = 18
     schedule_minute: int = 30
