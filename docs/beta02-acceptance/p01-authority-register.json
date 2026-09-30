@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "status": "pending_human_review",
+  "authority": "ASX official PDF + human confirmation",
+  "rows": [
+    {
+      "sample_id": "S01",
+      "ticker": "CVV",
+      "candidate_name": "Caravel Copper Project",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03136859-6A1344354",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03136859-6A1344354",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "rescheduled to the fourth quarter of 2026, from the September 2026 timing previously advised.",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S02",
+      "ticker": "AGY",
+      "candidate_name": "Rincon Lithium Project",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03116443-6A1336571",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03116443-6A1336571",
+      "source_pages": [
+        1,
+        11,
+        12,
+        13
+      ],
+      "source_excerpt": "12ktpa project development progressing with feasibility and engineering works",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S02",
+      "ticker": "AGY",
+      "candidate_name": "Tonopah Lithium Project",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03116443-6A1336571",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03116443-6A1336571",
+      "source_pages": [
+        1,
+        11,
+        12,
+        13
+      ],
+      "source_excerpt": "12ktpa project development progressing with feasibility and engineering works",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S03",
+      "ticker": "AGY",
+      "candidate_name": "Rincon Lithium Project",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03130574-6A1341758",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03130574-6A1341758",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S04",
+      "ticker": "CYL",
+      "candidate_name": "Trident",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03134886-6A1343577",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03134886-6A1343577",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S04",
+      "ticker": "CYL",
+      "candidate_name": "Plutonic Gold Belt",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03134886-6A1343577",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03134886-6A1343577",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S05",
+      "ticker": "WC8",
+      "candidate_name": "Bolt Cutter Central",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S05",
+      "ticker": "WC8",
+      "candidate_name": "Tabba Tabba",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S05",
+      "ticker": "WC8",
+      "candidate_name": "Hutt",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S05",
+      "ticker": "WC8",
+      "candidate_name": "Chewy",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S05",
+      "ticker": "WC8",
+      "candidate_name": "Leia",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S06",
+      "ticker": "GL1",
+      "candidate_name": "Manna Lithium Project",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03123369-6A1339377",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03123369-6A1339377",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "approved and has taken effect, with no appeals received",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S07",
+      "ticker": "DYL",
+      "candidate_name": "Nova Joint Venture",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03130488-6A1341768",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03130488-6A1341768",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "Two phase, A$5M earn-in",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S07",
+      "ticker": "DYL",
+      "candidate_name": "Nova Energy (Namibia) (Proprietary) Limited",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03130488-6A1341768",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03130488-6A1341768",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "Two phase, A$5M earn-in",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S09",
+      "ticker": "WC8",
+      "candidate_name": "Bolt Cutter Central",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03108404-6A1332742",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03108404-6A1332742",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S09",
+      "ticker": "WC8",
+      "candidate_name": "Tabba Tabba",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03108404-6A1332742",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03108404-6A1332742",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S10",
+      "ticker": "DRE",
+      "candidate_name": "Yin",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03128764-6A1341100",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128764-6A1341100",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "A mining lease application has been submitted",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    },
+    {
+      "sample_id": "S10",
+      "ticker": "DRE",
+      "candidate_name": "Gifford Creek Critical Metals Project",
+      "candidate_kind": "project_or_asset_candidate",
+      "source_document_key": "2924-03128764-6A1341100",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128764-6A1341100",
+      "source_pages": [
+        1
+      ],
+      "source_excerpt": "A mining lease application has been submitted",
+      "status": "pending_human_review",
+      "authority_rule": "Only create authoritative P01 entity after human confirms materiality and relationship from official PDF."
+    }
+  ]
+}

@@ -11,12 +11,32 @@ from ..analysis.ai_stub import (
     insight_metrics_with_document,
 )
 from ..analysis.classifier import classify
+from ..analysis.p3_family_classifier import classify_families
 from ..config import market_tz
 from ..datasources.base import AnnouncementSource
-from ..models import Announcement, Stock
+from ..models import Announcement, AnnouncementVersionRelation, Stock
+from .evidence_service import ensure_evidence
 from .qualitative_mining_context import enrich_qualitative_context
+from .p3_parse_service import PARSER_VERSION, parse_evidence
 
 logger = logging.getLogger(__name__)
+
+_REVISION_TERMS = ("revised", "revision", "correction", "replacement", "replace", "withdrawal", "withdrawn", "amended")
+
+
+def _candidate_version_relation(session: Session, announcement: Announcement, stock: Stock) -> None:
+    headline = announcement.headline.casefold()
+    if not any(term in headline for term in _REVISION_TERMS):
+        return
+    tokens = {token for token in headline.replace("-", " ").split() if len(token) > 3 and token not in _REVISION_TERMS}
+    candidates = session.query(Announcement).filter(Announcement.stock_id == stock.id, Announcement.id != announcement.id).order_by(Announcement.ann_date.desc()).limit(50).all()
+    prior = next((candidate for candidate in candidates if len(tokens & set(candidate.headline.casefold().replace("-", " ").split())) >= max(1, min(2, len(tokens)))), None)
+    if prior is None:
+        return
+    relation_type = "revises" if "revis" in headline else "replaces" if "replace" in headline else "corrects" if "correct" in headline else "withdraws" if "withdraw" in headline else "related_to"
+    exists = session.query(AnnouncementVersionRelation).filter_by(predecessor_announcement_id=prior.id, successor_announcement_id=announcement.id).first()
+    if exists is None:
+        session.add(AnnouncementVersionRelation(predecessor_announcement_id=prior.id, successor_announcement_id=announcement.id, relation_type=relation_type, confidence=0.65, status="pending_review", source="title_rule_candidate"))
 
 
 def sync_announcements(
@@ -26,11 +46,18 @@ def sync_announcements(
     analyzer: AnnouncementAnalyzer,
     count: int = 20,
     document_fetcher: AnnouncementDocumentFetcher | None = None,
+    include_evidence_stats: bool = False,
+    download_evidence: bool = True,
+    extract_evidence: bool = True,
+    parse_p3: bool = True,
+    parser_version: str = PARSER_VERSION,
 ) -> dict:
     """Returns {"new": n}. SourceBlockedError is NOT caught here — the pipeline
     handles degradation so it can mark the whole run, not just one stock."""
     raws = source.fetch(stock.code, count)
     new = 0
+    evidence_downloaded = evidence_failed = text_extracted = text_failed = 0
+    p3_parsed = p3_review_needed = p3_failed = p3_skipped = 0
     for raw in raws:
         exists = (
             session.query(Announcement.id)
@@ -40,6 +67,7 @@ def sync_announcements(
         if exists:
             continue
         classification = classify(raw.headline)
+        family_classification = classify_families(raw.headline, raw.raw)
         ann_date = raw.ann_date
         if ann_date.tzinfo is not None:
             # store naive local (Australia/Sydney) so "announcement day" aligns
@@ -56,6 +84,14 @@ def sync_announcements(
             type_score=classification.type_score,
             matched_keywords=json.dumps(classification.matched_keywords),
             raw_payload=json.dumps(raw.raw),
+            document_category=family_classification.document_category,
+            official_header_type=family_classification.official_header_type,
+            official_subtype=family_classification.official_subtype,
+            standard_form=family_classification.standard_form,
+            event_families_json=json.dumps(family_classification.families, ensure_ascii=False),
+            event_labels_json=json.dumps(family_classification.event_labels, ensure_ascii=False),
+            revision_tags_json=json.dumps(family_classification.revision_tags, ensure_ascii=False),
+            classification_source=family_classification.source,
         )
         document = None
         if analyzer.requires_document_text:
@@ -79,6 +115,29 @@ def sync_announcements(
             announcement.ai_summary = insight.summary
             announcement.ai_metrics = json.dumps(metrics)
         session.add(announcement)
+        session.flush()
+        evidence = ensure_evidence(session, announcement, stock, download_enabled=download_evidence, extract_enabled=extract_evidence)
+        _candidate_version_relation(session, announcement, stock)
+        if evidence.download_status == "downloaded":
+            evidence_downloaded += 1
+        elif evidence.download_status == "failed":
+            evidence_failed += 1
+        if evidence.text_status == "extracted":
+            text_extracted += 1
+        elif evidence.text_status == "failed":
+            text_failed += 1
+        if parse_p3 and evidence.text_status == "extracted":
+            parse_run = parse_evidence(session, evidence, parser_version)
+            if parse_run.status == "parsed":
+                p3_parsed += 1
+            elif parse_run.status in {"review_needed", "partial"}:
+                p3_review_needed += 1
+            else:
+                p3_failed += 1
+        else:
+            p3_skipped += 1
         new += 1
     session.commit()
+    if include_evidence_stats:
+        return {"new": new, "evidence_downloaded": evidence_downloaded, "evidence_failed": evidence_failed, "text_extracted": text_extracted, "text_failed": text_failed, "p3_parsed": p3_parsed, "p3_review_needed": p3_review_needed, "p3_failed": p3_failed, "p3_skipped": p3_skipped, "parser_version": parser_version}
     return {"new": new}

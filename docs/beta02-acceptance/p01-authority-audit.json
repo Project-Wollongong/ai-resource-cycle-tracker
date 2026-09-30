@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-09-25",
+  "database": "data/tracker.db",
+  "counts": {
+    "evidence_documents": 10,
+    "projects": 8,
+    "project_identities": 8,
+    "stock_projects": 8,
+    "asset_units": 2,
+    "asset_unit_identities": 2,
+    "commodity_relationships": 9
+  },
+  "baseline_status": "source_candidate_pending_human_review",
+  "unverified_imports_blocked": true
+}

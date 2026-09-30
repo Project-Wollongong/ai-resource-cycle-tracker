@@ -1,0 +1,204 @@
+{
+  "status": "source_verified_pending_human",
+  "rule": "Exact candidate name found in fixed ASX PDF text; human materiality/relationship signoff remains required.",
+  "rows": [
+    {
+      "sample_id": "S01",
+      "ticker": "CVV",
+      "candidate_name": "Caravel Copper Project",
+      "source_document_key": "2924-03136859-6A1344354",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03136859-6A1344354",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "    18 September 2026  DFS REVISED COMPLETION TIMING  CARAVEL COPPER PROJECT  Highlights  • Release of the Definitive Feasibility Study (DFS) for the Caravel Copper Project has been rescheduled to  the fourth quarter of 2026, from the September 2026 timing previously advised.  • Further metallur",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S02",
+      "ticker": "AGY",
+      "candidate_name": "Rincon Lithium Project",
+      "source_document_key": "2924-03116443-6A1336571",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03116443-6A1336571",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "EPORT – JUNE 2026  HIGHLIGHTS   12ktpa project development progressing with feasibility and engineering works  for  the Rincon Lithium Project   Process testwork programs conducted with international technology providers –  successful r esults deliver critical engineering and operating data to support DFS  design, equipment sizing and economic evaluation   Rea",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S02",
+      "ticker": "AGY",
+      "candidate_name": "Tonopah Lithium Project",
+      "source_document_key": "2924-03116443-6A1336571",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03116443-6A1336571",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "” or the “Company”) continued development works at the  Rincon Lithium Project (“Rincon ”) in Argentina , and owns  the Tonopah Lithium Project in  Nevada, USA, achieving significant milestones at Rincon during the Quarter.  Rincon Lithium Project – Argentina (77.5% JV interest, earning up to 90%)  The Rincon Lithium Project is the flagship asset in Argosy ’s l",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S03",
+      "ticker": "AGY",
+      "candidate_name": "Rincon Lithium Project",
+      "source_document_key": "2924-03130574-6A1341758",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03130574-6A1341758",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": " continue completing our upcoming milestones for a  successful DFS towards realising the full development of our 12ktpa Rincon Lithium Project.”  For personal use only     ASX ANNOUNCEMENT    Page 2 of 4  Argosy Minerals Limited  ACN 073 391 189  Level 2, 22 Mount Street, Perth, WA 6000  PO Box 7054, Cloisters Square, Perth, WA 6850  Ph: (08) 6188 8181  Fax:  ",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S04",
+      "ticker": "CYL",
+      "candidate_name": "Trident",
+      "source_document_key": "2924-03134886-6A1343577",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03134886-6A1343577",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "3: Refer to ASX announcement 10 September 2025 “Plutonic Belt Reserves double, supporting growth plans       1 ASX:CYL  Trident Reserve grows by 30%; ongoing infill  drilling of 448koz inferred Resource expected  to further grow Reserves    • Trident’s underground Reserve has increased by 32% to 524koz at 4.2g/t Au, with  an anticipated  ±10 yea",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S04",
+      "ticker": "CYL",
+      "candidate_name": "Plutonic Gold Belt",
+      "source_document_key": "2924-03134886-6A1343577",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03134886-6A1343577",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "Ounces (Koz)  Proved - - -  Probable 3.9 4.2 524  Total 3.9 4.2 524  Catalyst Metals’ flagship  asset is the 40km long  Plutonic Gold Belt in  Western Australia. This belt  currently produces ~100koz  pa at an AISC of  ±A$2,800/oz from three  mines at Plutonic Main,  Plutonic East and Keillor.  Catalyst is currently  bringing three new mines  into producti",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S05",
+      "ticker": "WC8",
+      "candidate_name": "Bolt Cutter Central",
+      "source_document_key": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "          CONTINUED STRONG DRILL RESULTS FROM BOLT CUTTER CENTRAL AND  TABBA TABBA     Highlights    Bolt Cutter Central  o Exploration and infill drilling returned multiple strongly minerali sed intersections  from Bolt Cutter  Central. Best results include:  o BCRC115  • 8m @ 1.5% L",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S05",
+      "ticker": "WC8",
+      "candidate_name": "Tabba Tabba",
+      "source_document_key": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "          CONTINUED STRONG DRILL RESULTS FROM BOLT CUTTER CENTRAL AND  TABBA TABBA     Highlights    Bolt Cutter Central  o Exploration and infill drilling returned multiple strongly minerali sed intersections  from Bolt Cutter  Central. Best results include:  o BCRC115  • 8m @ 1.5% Li2O from 89m (est",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S05",
+      "ticker": "WC8",
+      "candidate_name": "Hutt",
+      "source_document_key": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "he discovery    Tabba Tabba  o Excellent results returned from metallurgical and infill drilling at Tabba Tabba  at the Hutt, Chewy  and Leia pegmatites. Best results include:  ▪ Hutt  o TAMT038  • 25.1m @ 1.2% Li2O from 56.5m (est. true width)   o TAMT040  •  21.4m @ 0.9% Li2O from 22.6m (est. true width) including  • 8.6m @ 1.4% Li2O from 2",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S05",
+      "ticker": "WC8",
+      "candidate_name": "Chewy",
+      "source_document_key": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "covery    Tabba Tabba  o Excellent results returned from metallurgical and infill drilling at Tabba Tabba  at the Hutt, Chewy  and Leia pegmatites. Best results include:  ▪ Hutt  o TAMT038  • 25.1m @ 1.2% Li2O from 56.5m (est. true width)   o TAMT040  •  21.4m @ 0.9% Li2O from 22.6m (est. true width) including  • 8.6m @ 1.4% Li2O from 28.6m  ▪",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S05",
+      "ticker": "WC8",
+      "candidate_name": "Leia",
+      "source_document_key": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "abba Tabba  o Excellent results returned from metallurgical and infill drilling at Tabba Tabba  at the Hutt, Chewy  and Leia pegmatites. Best results include:  ▪ Hutt  o TAMT038  • 25.1m @ 1.2% Li2O from 56.5m (est. true width)   o TAMT040  •  21.4m @ 0.9% Li2O from 22.6m (est. true width) including  • 8.6m @ 1.4% Li2O from 28.6m  ▪ Chewy  o ",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S06",
+      "ticker": "GL1",
+      "candidate_name": "Manna Lithium Project",
+      "source_document_key": "2924-03123369-6A1339377",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03123369-6A1339377",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": " “Global Lithium ” or “the Company”) is pleased to  announce that the Native Vegetation Clearing Permit ( NVCP) for its Manna Lithium Project has been  approved and has taken effect, with no appeals received during the statutory appeal period. In addition,  the Department of Water and Environmental Regulation (DWER) has confirmed technical support for the  gr",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S07",
+      "ticker": "DYL",
+      "candidate_name": "Nova Joint Venture",
+      "source_document_key": "2924-03130488-6A1341768",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03130488-6A1341768",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "DYL OTCQX: DYLLF ABN 97 006 391 948          @DeepYellowLtd          deep-yellow-limited              2 September 2026  NOVA JOINT VENTURE, NAMIBIA – A$5M EARN-IN BY CORE ENERGY Highlights • Two phase, A$5M earn-in by Core Energy Minerals Limited to acquire up to a 51% interest in the Nova Joint Venture. • Core Energy will be appointed as the Manager of th",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S07",
+      "ticker": "DYL",
+      "candidate_name": "Nova Energy (Namibia) (Proprietary) Limited",
+      "source_document_key": "2924-03130488-6A1341768",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03130488-6A1341768",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "(Core Energy) (ASX: CR3) in which Core Energy can acquire an equity interest in the incorporated joint venture company, Nova Energy (Namibia) (Proprietary) Limited (NJV) in Namibia. The NJV holds Exploration Prospecting Licence (EPL) 3669 and EPL 3670, together covering approximately 600km² west and south-west of the Langer Heinrich uranium mine (see Figure 1). These EPLs are cons",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S09",
+      "ticker": "WC8",
+      "candidate_name": "Bolt Cutter Central",
+      "source_document_key": "2924-03108404-6A1332742",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03108404-6A1332742",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "          POSITIVE METALLURGY TESTWORK FROM   BOLT CUTTER CENTRAL     Highlights  • Maiden metallurgical (sighter) test work on core samples from Wildcat’s Bolt Cutter Central lithium  discovery demonstrates excellent recovery of spodumene via industry standard techniques  o Average r",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S09",
+      "ticker": "WC8",
+      "candidate_name": "Tabba Tabba",
+      "source_document_key": "2924-03108404-6A1332742",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03108404-6A1332742",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "Li2O generated from three  composites  o Results utilised the same Whole of Ore Flotation method intended to be used at Tabba Tabba  • Bolt Cutter Central is just 10km west of Wildcat’s Tabba Tabba Project in WA’s Pilbara region, and the  mineralised area extends more than 2.3km to the northwest and up to 800m to the northeast   • Additional lithium",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S10",
+      "ticker": "DRE",
+      "candidate_name": "Yin",
+      "source_document_key": "2924-03128764-6A1341100",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128764-6A1341100",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "es.com.au  www.dreadnoughtresources.com.au    ASX:DRE   Dreadnought Resources Ltd   1  ASX ANNOUNCEMENT 31 August 2026  Yin Rare Earths Mining Lease Application – Gifford Creek Critical Metals   HIGHLIGHTS   • A mining lease application has been submitted in respect of the Yin Rare Earth deposits (“Yin”).   • The application is based on the ",
+      "status": "source_verified_pending_human"
+    },
+    {
+      "sample_id": "S10",
+      "ticker": "DRE",
+      "candidate_name": "Gifford Creek Critical Metals Project",
+      "source_document_key": "2924-03128764-6A1341100",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128764-6A1341100",
+      "source_match": true,
+      "source_page": 1,
+      "source_excerpt": "ounce that mining, general  purpose and miscellaneous applications have been submitted for Yin, part of the 100% owned  Gifford Creek Critical Metals Project, in the Gascoyne region of WA.  Dreadnought’s Managing Director, Dean Tuck, commented: “A key pillar of our Finding More Gold Faster Strategy  is  continuing to progress and maintain commercial optionality from our Giff",
+      "status": "source_verified_pending_human"
+    }
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "schema_version": "p03-fixed-sample-baseline-v2",
+  "status": "automated_baseline_pending_human_signoff",
+  "parser_version": "p3_reported_fact_v4_database_consistency",
+  "extractor_version": "p3_fact_v3_entity_consistency",
+  "counting_policy": {
+    "atomic_fact": "one persisted P3Fact row",
+    "information_point": "one source-grounded logical claim composed of one or more atomic Facts",
+    "review_needed": "logical Information Points whose review_status is review_needed",
+    "summary": ["executive_summary", "highlights", "key_results", "summary"],
+    "table": ["standard_form"],
+    "body_fallback": ["body", "body_fallback"],
+    "target_range": [20, 50],
+    "target_is_not_a_quota": true,
+    "no_padding": true,
+    "no_truncation": true
+  },
+  "sample_count": 10,
+  "samples": [
+    {
+      "sample_id": "S01", "ticker": "CVV", "headline": "DFS Revised Completion Timing",
+      "announcement_id": "2924-03136859-6A1344354", "parse_status": "review_needed",
+      "atomic_fact_count": 8, "information_point_count": 5,
+      "summary_information_point_count": 5, "table_information_point_count": 0,
+      "body_fallback_information_point_count": 0, "other_information_point_count": 0,
+      "review_needed_count": 1, "review_needed_atomic_fact_count": 2,
+      "count_status": "source_insufficient", "source_insufficient": true, "summary_coverage_ratio": 1.0,
+      "unfound_fields": {"family_rule_slots": ["F05.approval_status"], "required_fact_types": []},
+      "required_fact_types": ["capex_review", "dfs_completion", "fid_timing", "original_timing", "study_type", "timeline_change"],
+      "extracted_fact_types": ["capex_review", "dfs_completion", "fid_timing", "original_timing", "study_type", "test_programme", "timeline_change"],
+      "attribution": {
+        "projects": [{"project": "Caravel Copper Project", "atomic_fact_count": 5}],
+        "asset_units": [], "company_level_atomic_fact_count": 3,
+        "status_counts": {"confirmed": 5, "unknown": 3}
+      },
+      "reconciliation": {"grouped_atomic_fact_count": 8, "all_atomic_facts_grouped": true, "source_point_count": 5, "all_points_source_counted": true},
+      "fixture_sha256_verified": true
+    },
+    {
+      "sample_id": "S02", "ticker": "AGY", "headline": "Quarterly Activities/Appendix 5B Cash Flow Report",
+      "announcement_id": "2924-03116443-6A1336571", "parse_status": "review_needed",
+      "atomic_fact_count": 17, "information_point_count": 17,
+      "summary_information_point_count": 3, "table_information_point_count": 14,
+      "body_fallback_information_point_count": 0, "other_information_point_count": 0,
+      "review_needed_count": 12, "review_needed_atomic_fact_count": 12,
+      "count_status": "source_insufficient", "source_insufficient": true, "summary_coverage_ratio": 0.1765,
+      "unfound_fields": {"family_rule_slots": ["F03.processing_route", "F03.test_programme", "F04.construction_progress"], "required_fact_types": []},
+      "required_fact_types": ["cash_balance", "development_spend", "financing_cash_flow", "investing_cash_flow", "operating_cash_flow", "reporting_period"],
+      "extracted_fact_types": ["administration_spend", "cash_balance", "development_spend", "exploration_spend", "financing_cash_flow", "investing_cash_flow", "operating_cash_flow", "processing_capacity", "reporting_period", "study_type"],
+      "attribution": {
+        "projects": [{"project": "Rincon Lithium Project", "atomic_fact_count": 1}],
+        "asset_units": [], "company_level_atomic_fact_count": 16,
+        "status_counts": {"confirmed": 1, "unknown": 16}
+      },
+      "reconciliation": {"grouped_atomic_fact_count": 17, "all_atomic_facts_grouped": true, "source_point_count": 17, "all_points_source_counted": true},
+      "fixture_sha256_verified": true
+    },
+    {
+      "sample_id": "S03", "ticker": "AGY", "headline": "Successful $3M Placement and SPP launched",
+      "announcement_id": "2924-03130574-6A1341758", "parse_status": "review_needed",
+      "atomic_fact_count": 7, "information_point_count": 7,
+      "summary_information_point_count": 2, "table_information_point_count": 0,
+      "body_fallback_information_point_count": 5, "other_information_point_count": 0,
+      "review_needed_count": 7, "review_needed_atomic_fact_count": 7,
+      "count_status": "source_insufficient", "source_insufficient": true, "summary_coverage_ratio": 0.2857,
+      "unfound_fields": {"family_rule_slots": [], "required_fact_types": []},
+      "required_fact_types": ["funding_amount", "funding_method", "issue_price", "new_securities_issued", "spp_limit", "use_of_funds"],
+      "extracted_fact_types": ["funding_amount", "funding_method", "issue_price", "new_securities_issued", "spp_limit", "use_of_funds"],
+      "attribution": {"projects": [], "asset_units": [], "company_level_atomic_fact_count": 7, "status_counts": {"unknown": 7}},
+      "reconciliation": {"grouped_atomic_fact_count": 7, "all_atomic_facts_grouped": true, "source_point_count": 7, "all_points_source_counted": true},
+      "fixture_sha256_verified": true
+    },
+    {
+      "sample_id": "S04", "ticker": "CYL", "headline": "Trident Reserve grows by 30%",
+      "announcement_id": "2924-03134886-6A1343577", "parse_status": "review_needed",
+      "atomic_fact_count": 17, "information_point_count": 8,
+      "summary_information_point_count": 6, "table_information_point_count": 0,
+      "body_fallback_information_point_count": 2, "other_information_point_count": 0,
+      "review_needed_count": 5, "review_needed_atomic_fact_count": 13,
+      "count_status": "source_insufficient", "source_insufficient": true, "summary_coverage_ratio": 0.75,
+      "unfound_fields": {"family_rule_slots": [], "required_fact_types": []},
+      "required_fact_types": ["classification", "contained_metal", "first_ore_timing", "grade", "mine_life", "reported_increase", "tonnage"],
+      "extracted_fact_types": ["annual_production", "classification", "commodity", "contained_metal", "development_completed", "first_ore_timing", "grade", "mine_life", "reported_increase", "resource_or_reserve_type", "tonnage"],
+      "attribution": {
+        "projects": [
+          {"project": "Plutonic Gold Belt", "atomic_fact_count": 6},
+          {"project": "Trident", "atomic_fact_count": 10}
+        ],
+        "asset_units": [], "company_level_atomic_fact_count": 1,
+        "status_counts": {"confirmed": 16, "unknown": 1}
+      },
+      "reconciliation": {"grouped_atomic_fact_count": 17, "all_atomic_facts_grouped": true, "source_point_count": 8, "all_points_source_counted": true},
+      "fixture_sha256_verified": true
+    },
+    {
+      "sample_id": "S05", "ticker": "WC8", "headline": "CONTINUED STRONG DRILL RESULTS",
+      "announcement_id": "2924-03128755-6A1341087", "parse_status": "review_needed",
+      "atomic_fact_count": 74, "information_point_count": 18,
+      "summary_information_point_count": 18, "table_information_point_count": 0,
+      "body_fallback_information_point_count": 0, "other_information_point_count": 0,
+      "review_needed_count": 16, "review_needed_atomic_fact_count": 72,
+      "count_status": "source_insufficient", "source_insufficient": true, "summary_coverage_ratio": 1.0,
+      "unfound_fields": {"family_rule_slots": [], "required_fact_types": []},
+      "required_fact_types": ["cash_balance", "from_depth", "grade", "hole_id", "interval_length", "resource_estimate_target", "true_width"],
+      "extracted_fact_types": ["asset_rights", "cash_balance", "from_depth", "grade", "hole_id", "interval_length", "resource_estimate_target", "study_type", "true_width"],
+      "attribution": {
+        "projects": [{"project": "Tabba Tabba", "atomic_fact_count": 71}],
+        "asset_units": [
+          {"asset_unit": "Bolt Cutter Central", "project": "Tabba Tabba", "atomic_fact_count": 35},
+          {"asset_unit": "Chewy", "project": "Tabba Tabba", "atomic_fact_count": 10},
+          {"asset_unit": "Hutt", "project": "Tabba Tabba", "atomic_fact_count": 14},
+          {"asset_unit": "Leia", "project": "Tabba Tabba", "atomic_fact_count": 10}
+        ],
+        "company_level_atomic_fact_count": 3,
+        "status_counts": {"confirmed": 71, "unknown": 3}
+      },
+      "reconciliation": {"grouped_atomic_fact_count": 74, "all_atomic_facts_grouped": true, "source_point_count": 18, "all_points_source_counted": true},
+      "fixture_sha256_verified": true
+    },
+    {
+      "sample_id": "S06", "ticker": "GL1", "headline": "Manna Clearing Permit and Groundwater Licence secured",
+      "announcement_id": "2924-03123369-6A1339377", "parse_status": "review_needed",
+      "atomic_fact_count": 9, "information_point_count": 6,
+      "summary_information_point_count": 0, "table_information_point_count": 0,
+      "body_fallback_information_point_count": 6, "other_information_point_count": 0,
+      "review_needed_count": 6, "review_needed_atomic_fact_count": 9,
+      "count_status": "source_insufficient", "source_insufficient": true, "summary_coverage_ratio": 0.0,
+      "unfound_fields": {"family_rule_slots": [], "required_fact_types": []},
+      "required_fact_types": ["area", "authority", "expiry_date", "permit_identifier", "permit_status", "permit_type"],
+      "extracted_fact_types": ["area", "authority", "expiry_date", "permit_identifier", "permit_status", "permit_type"],
+      "attribution": {
+        "projects": [{"project": "Manna Lithium Project", "atomic_fact_count": 2}],
+        "asset_units": [], "company_level_atomic_fact_count": 7,
+        "status_counts": {"confirmed": 2, "unknown": 7}
+      },
+      "reconciliation": {"grouped_atomic_fact_count": 9, "all_atomic_facts_grouped": true, "source_point_count": 6, "all_points_source_counted": true},
+      "fixture_sha256_verified": true
+    },
+    {
+      "sample_id": "S07", "ticker": "DYL", "headline": "Nova Joint Venture, Namibia - A$5m Earn-In By Core Energy",
+      "announcement_id": "2924-03130488-6A1341768", "parse_status": "review_needed",
+      "atomic_fact_count": 11, "information_point_count": 5,
+      "summary_information_point_count": 2, "table_information_point_count": 0,
+      "body_fallback_information_point_count": 3, "other_information_point_count": 0,
+      "review_needed_count": 4, "review_needed_atomic_fact_count": 8,
+      "count_status": "source_insufficient", "source_insufficient": true, "summary_coverage_ratio": 0.4,
+      "unfound_fields": {"family_rule_slots": [], "required_fact_types": []},
+      "required_fact_types": ["current_ownership", "earn_in_amount", "earn_in_percentage", "manager", "maximum_ownership", "transaction_type"],
+      "extracted_fact_types": ["current_ownership", "earn_in_amount", "earn_in_percentage", "manager", "maximum_ownership", "transaction_type"],
+      "attribution": {
+        "projects": [{"project": "Nova Joint Venture", "atomic_fact_count": 4}],
+        "asset_units": [], "company_level_atomic_fact_count": 7,
+        "status_counts": {"confirmed": 4, "unknown": 7}
+      },
+      "reconciliation": {"grouped_atomic_fact_count": 11, "all_atomic_facts_grouped": true, "source_point_count": 5, "all_points_source_counted": true},
+      "fixture_sha256_verified": true
+    },
+    {
+      "sample_id": "S08", "ticker": "EL8", "headline": "Change of Director's Interest Notice",
+      "announcement_id": "2924-03134678-6A1343454", "parse_status": "review_needed",
+      "atomic_fact_count": 0, "information_point_count": 0,
+      "summary_information_point_count": 0, "table_information_point_count": 0,
+      "body_fallback_information_point_count": 0, "other_information_point_count": 0,
+      "review_needed_count": 0, "review_needed_atomic_fact_count": 0,
+      "count_status": "source_insufficient", "source_insufficient": true, "summary_coverage_ratio": 0.0,
+      "unfound_fields": {"family_rule_slots": [], "required_fact_types": []},
+      "required_fact_types": [], "extracted_fact_types": [],
+      "attribution": {"projects": [], "asset_units": [], "company_level_atomic_fact_count": 0, "status_counts": {}},
+      "reconciliation": {"grouped_atomic_fact_count": 0, "all_atomic_facts_grouped": true, "source_point_count": 0, "all_points_source_counted": true},
+      "fixture_sha256_verified": true
+    },
+    {
+      "sample_id": "S09", "ticker": "WC8", "headline": "POSITIVE METALLURGY TESTWORK FROM BOLT CUTTER CENTRAL",
+      "announcement_id": "2924-03108404-6A1332742", "parse_status": "review_needed",
+      "atomic_fact_count": 37, "information_point_count": 11,
+      "summary_information_point_count": 11, "table_information_point_count": 0,
+      "body_fallback_information_point_count": 0, "other_information_point_count": 0,
+      "review_needed_count": 7, "review_needed_atomic_fact_count": 31,
+      "count_status": "source_insufficient", "source_insufficient": true, "summary_coverage_ratio": 1.0,
+      "unfound_fields": {"family_rule_slots": [], "required_fact_types": []},
+      "required_fact_types": ["drilling_status", "processing_route", "product_grade", "recovery", "sample_count", "testwork_type"],
+      "extracted_fact_types": ["cash_balance", "drilling_status", "from_depth", "grade", "hole_id", "interval_length", "processing_route", "product_grade", "recovery", "sample_count", "testwork_type", "true_width"],
+      "attribution": {
+        "projects": [{"project": "Tabba Tabba", "atomic_fact_count": 32}],
+        "asset_units": [{"asset_unit": "Bolt Cutter Central", "project": "Tabba Tabba", "atomic_fact_count": 31}],
+        "company_level_atomic_fact_count": 5,
+        "status_counts": {"confirmed": 32, "unknown": 5}
+      },
+      "reconciliation": {"grouped_atomic_fact_count": 37, "all_atomic_facts_grouped": true, "source_point_count": 11, "all_points_source_counted": true},
+      "fixture_sha256_verified": true
+    },
+    {
+      "sample_id": "S10", "ticker": "DRE", "headline": "Yin Rare Earths Mining Lease Application, Gifford Creek",
+      "announcement_id": "2924-03128764-6A1341100", "parse_status": "parsed",
+      "atomic_fact_count": 0, "information_point_count": 0,
+      "summary_information_point_count": 0, "table_information_point_count": 0,
+      "body_fallback_information_point_count": 0, "other_information_point_count": 0,
+      "review_needed_count": 0, "review_needed_atomic_fact_count": 0,
+      "count_status": "source_insufficient", "source_insufficient": true, "summary_coverage_ratio": 0.0,
+      "unfound_fields": {
+        "family_rule_slots": ["F03.test_programme", "F05.permit_status", "F05.permit_type"],
+        "required_fact_types": ["permit_status", "permit_type"]
+      },
+      "required_fact_types": ["permit_status", "permit_type"], "extracted_fact_types": [],
+      "attribution": {"projects": [], "asset_units": [], "company_level_atomic_fact_count": 0, "status_counts": {}},
+      "reconciliation": {"grouped_atomic_fact_count": 0, "all_atomic_facts_grouped": true, "source_point_count": 0, "all_points_source_counted": true},
+      "fixture_sha256_verified": true
+    }
+  ]
+}

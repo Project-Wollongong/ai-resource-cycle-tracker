@@ -239,3 +239,41 @@ npm run build
 6. Risk Score 第一版不会推断现金 runway、融资折价、债务或完整稀释条款；这些需要后续从 Appendix 5B、融资公告和股本结构中结构化抽取。
 7. 规则全文分析只做窄范围抽取，不能替代地质、矿权、财务和估值尽调。
 8. `claude` 分析器只有在显式允许付费调用且配置 API key 时才会运行。
+
+## Beta02 P01–P03 证据流水线
+
+P01、P02、P03 采用严格分层：P01 管理经人工批准的 Stock、Project、Asset Unit、Commodity、Identity 和历史关系；P02 保存 Announcement 元数据、原始 PDF、Raw Text、SHA-256、页数和采集状态；P03 只把公司明确披露的内容整理成可追溯的 Event、Fact 和 Statement，不计算 P04 指标，也不产生投资判断。
+
+新公告默认流程为：
+
+```text
+ASX metadata → Announcement → original.pdf / SHA-256 → raw_text.txt
+→ EvidenceDocument → P3ParseRun → Summary-first Event / Fact
+→ approved-entity mapping → proposed version relations → UI evidence
+```
+
+文件证据位于 `data/evidence/asx/{TICKER}/{ANNOUNCEMENT_ID}/`。数据库只保存受控路径和证据状态；普通 API 通过 EvidenceDocument 下载端点提供 PDF/Raw Text，不接受任意本地路径参数。P3 每条事实保留 EvidenceDocument、页码、摘录、解析器版本、原始值、标准化值、单位、币种、期间和状态。
+
+Event 是一项中性业务事件（F01–F08）；Fact 是公告明确报告的原子字段；Statement 是带来源的文本陈述。P3 新发现的实体名称先形成 EntityMention/Mapping 或 P01 Update Proposal，只有 P01 审核批准后才进入正式 Project Tree。`current` 为当前有效事实，`historical` 为历史披露，`superseded` 为经确认已被替代，`withdrawn` 为经确认已撤回；普通页面默认排除 superseded/withdrawn/rejected。
+
+### 管理员历史回填
+
+入口：`/admin/backfill`。历史公告不会自动全量处理。管理员必须用 Stock、Announcement 或日期范围限定范围，先点击 Preview，核对缺失 PDF/Raw Text、解析状态、Stock/Family 分组、跳过原因和动作，再执行。Preview 严格只读，不下载、不调用模型、不写 P3 Fact。执行后可查看 BackfillRun/BackfillRunItem、失败阶段和原因，并仅重试失败项。
+
+管理员 API：
+
+```text
+POST /api/admin/backfill/preview
+POST /api/admin/backfill/run
+GET  /api/admin/backfill/runs
+GET  /api/admin/backfill/runs/{run_id}
+GET  /api/admin/backfill/runs/{run_id}/items
+POST /api/admin/backfill/runs/{run_id}/retry-failed
+POST /api/admin/backfill/runs/{run_id}/cancel
+```
+
+普通股票详情页继续显示经批准的项目树、公告外链、本地 PDF、Evidence 状态、客观摘要、多个 Event、Facts、实体映射、页码/摘录和版本状态。Drill Context 仅在 F01 钻孔信息存在时显示；非钻探公告显示不适用或留空。
+
+P04 只能读取已保存且可追溯的 P3Fact，例如 Cash Balance、季度现金流、Issue Price、Resource/Reserve 数值和 DFS Timing。P04 计算结果必须另表保存，绝不能反向覆盖 P3 的 `value_raw`、单位、币种、期间、状态、页码、摘录、Evidence 或解析版本。
+
+完整实施和验收结果见 [P01–P03 实施说明](docs/beta02-p1-p3-implementation.md) 与 [最终实施报告](docs/beta02-p1-p3-final-implementation-report.md)。

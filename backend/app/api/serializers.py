@@ -5,6 +5,7 @@ from ..schemas import AnnouncementOut, SignalOut, SignalReturnOut
 
 
 def announcement_out(ann: Announcement, code: str) -> AnnouncementOut:
+    evidence = ann.evidence_document
     return AnnouncementOut(
         id=ann.id,
         code=code,
@@ -18,6 +19,25 @@ def announcement_out(ann: Announcement, code: str) -> AnnouncementOut:
         matched_keywords=json.loads(ann.matched_keywords or "[]"),
         ai_summary=ann.ai_summary,
         ai_metrics=_json_object_or_none(ann.ai_metrics),
+        evidence_document_id=evidence.id if evidence else None,
+        evidence_status=evidence.evidence_status if evidence else "metadata_only",
+        download_status=evidence.download_status if evidence else "pending",
+        text_status=evidence.text_status if evidence else "pending",
+        local_pdf_available=bool(evidence and evidence.local_original_path),
+        page_count=evidence.page_count if evidence else None,
+        file_size_bytes=evidence.file_size_bytes if evidence else None,
+        hash_prefix=(evidence.file_hash_sha256 or evidence.content_hash)[:12] if evidence and (evidence.file_hash_sha256 or evidence.content_hash) else None,
+        fetched_at=evidence.downloaded_at if evidence else None,
+        evidence_error=evidence.error_message if evidence else None,
+        evidence_retryable=bool(evidence and evidence.download_status == "failed" or evidence and evidence.text_status == "failed"),
+        document_category=ann.document_category or "Other / Needs Review",
+        official_header_type=ann.official_header_type,
+        official_subtype=ann.official_subtype,
+        standard_form=ann.standard_form,
+        event_families=_json_list(ann.event_families_json),
+        event_labels=_json_list(ann.event_labels_json),
+        revision_tags=_json_list(ann.revision_tags_json),
+        classification_source=ann.classification_source or "title_routing",
     )
 
 
@@ -29,6 +49,15 @@ def _json_object_or_none(raw: str | None) -> dict | None:
     except json.JSONDecodeError:
         return None
     return data if isinstance(data, dict) else None
+
+
+def _json_list(raw: str | None) -> list[str]:
+    if not raw: return []
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    return [str(item) for item in data] if isinstance(data, list) else []
 
 
 def signal_out(sig: Signal, stock: Stock) -> SignalOut:

@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "dataset_version": "beta02-p01-entity-baseline-candidate-v1",
+  "status": "pending_human_review",
+  "source": "docs/beta02-acceptance/samples.json",
+  "rows": [
+    {
+      "sample_id": "S01",
+      "ticker": "CVV",
+      "headline": "DFS Revised Completion Timing",
+      "asx_announcement_id": "2924-03136859-6A1344354",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03136859-6A1344354",
+      "entity_candidates": [
+        "Caravel Copper Project"
+      ],
+      "status": "pending_human_review",
+      "reviewer": null,
+      "reviewed_at": null,
+      "notes": "候选实体来自公告原文；确认后才写入 P01 baseline。"
+    },
+    {
+      "sample_id": "S02",
+      "ticker": "AGY",
+      "headline": "Quarterly Activities/Appendix 5B Cash Flow Report",
+      "asx_announcement_id": "2924-03116443-6A1336571",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03116443-6A1336571",
+      "entity_candidates": [
+        "Rincon Lithium Project",
+        "Tonopah Lithium Project"
+      ],
+      "status": "pending_human_review",
+      "reviewer": null,
+      "reviewed_at": null,
+      "notes": "候选实体来自公告原文；确认后才写入 P01 baseline。"
+    },
+    {
+      "sample_id": "S03",
+      "ticker": "AGY",
+      "headline": "Successful $3M Placement and SPP launched",
+      "asx_announcement_id": "2924-03130574-6A1341758",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03130574-6A1341758",
+      "entity_candidates": [
+        "Rincon Lithium Project"
+      ],
+      "status": "pending_human_review",
+      "reviewer": null,
+      "reviewed_at": null,
+      "notes": "候选实体来自公告原文；确认后才写入 P01 baseline。"
+    },
+    {
+      "sample_id": "S04",
+      "ticker": "CYL",
+      "headline": "Trident Reserve grows by 30%",
+      "asx_announcement_id": "2924-03134886-6A1343577",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03134886-6A1343577",
+      "entity_candidates": [
+        "Trident",
+        "Plutonic Gold Belt"
+      ],
+      "status": "pending_human_review",
+      "reviewer": null,
+      "reviewed_at": null,
+      "notes": "候选实体来自公告原文；确认后才写入 P01 baseline。"
+    },
+    {
+      "sample_id": "S05",
+      "ticker": "WC8",
+      "headline": "CONTINUED STRONG DRILL RESULTS",
+      "asx_announcement_id": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "entity_candidates": [
+        "Bolt Cutter Central",
+        "Tabba Tabba",
+        "Hutt",
+        "Chewy",
+        "Leia"
+      ],
+      "status": "pending_human_review",
+      "reviewer": null,
+      "reviewed_at": null,
+      "notes": "候选实体来自公告原文；确认后才写入 P01 baseline。"
+    },
+    {
+      "sample_id": "S06",
+      "ticker": "GL1",
+      "headline": "Manna Clearing Permit and Groundwater Licence secured",
+      "asx_announcement_id": "2924-03123369-6A1339377",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03123369-6A1339377",
+      "entity_candidates": [
+        "Manna Lithium Project"
+      ],
+      "status": "pending_human_review",
+      "reviewer": null,
+      "reviewed_at": null,
+      "notes": "候选实体来自公告原文；确认后才写入 P01 baseline。"
+    },
+    {
+      "sample_id": "S07",
+      "ticker": "DYL",
+      "headline": "Nova Joint Venture, Namibia - A$5m Earn-In By Core Energy",
+      "asx_announcement_id": "2924-03130488-6A1341768",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03130488-6A1341768",
+      "entity_candidates": [
+        "Nova Joint Venture",
+        "Nova Energy (Namibia) (Proprietary) Limited"
+      ],
+      "status": "pending_human_review",
+      "reviewer": null,
+      "reviewed_at": null,
+      "notes": "候选实体来自公告原文；确认后才写入 P01 baseline。"
+    },
+    {
+      "sample_id": "S08",
+      "ticker": "EL8",
+      "headline": "Change of Director's Interest Notice",
+      "asx_announcement_id": "2924-03134678-6A1343454",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03134678-6A1343454",
+      "entity_candidates": [],
+      "status": "pending_human_review",
+      "reviewer": null,
+      "reviewed_at": null,
+      "notes": "候选实体来自公告原文；确认后才写入 P01 baseline。"
+    },
+    {
+      "sample_id": "S09",
+      "ticker": "WC8",
+      "headline": "POSITIVE METALLURGY TESTWORK FROM BOLT CUTTER CENTRAL",
+      "asx_announcement_id": "2924-03108404-6A1332742",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03108404-6A1332742",
+      "entity_candidates": [
+        "Bolt Cutter Central",
+        "Tabba Tabba"
+      ],
+      "status": "pending_human_review",
+      "reviewer": null,
+      "reviewed_at": null,
+      "notes": "候选实体来自公告原文；确认后才写入 P01 baseline。"
+    },
+    {
+      "sample_id": "S10",
+      "ticker": "DRE",
+      "headline": "Yin Rare Earths Mining Lease Application, Gifford Creek",
+      "asx_announcement_id": "2924-03128764-6A1341100",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128764-6A1341100",
+      "entity_candidates": [
+        "Yin",
+        "Gifford Creek Critical Metals Project"
+      ],
+      "status": "pending_human_review",
+      "reviewer": null,
+      "reviewed_at": null,
+      "notes": "候选实体来自公告原文；确认后才写入 P01 baseline。"
+    }
+  ]
+}

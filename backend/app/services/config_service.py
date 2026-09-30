@@ -12,6 +12,11 @@ from sqlalchemy.orm import Session
 from ..models import AppConfig, AppConfigHistory
 
 DEFAULTS: dict[str, Any] = {
+    "ingestion": {
+        "prices": {"frequency": "daily", "history_days": 365, "max_backfill_days": 30, "provider": "yahoo", "enabled": True},
+        "announcements": {"frequency": "daily", "history_days": 365, "max_items": 20, "download_pdf": True, "extract_text": True, "parse_p3": True, "parser_version": "p3_reported_fact_v7_version_relations", "max_retries": 3, "timeout_seconds": 30, "provider": "asx_json", "enabled": True},
+        "commodities": {"frequency": "daily", "history_days": 365, "max_backfill_days": 30, "provider": "yahoo", "enabled": True},
+    },
     "weights": {
         "announcement": 0.40,
         "resource": 0.20,
@@ -46,6 +51,7 @@ DEFAULTS: dict[str, Any] = {
 }
 
 DESCRIPTIONS = {
+    "ingestion": "Configurable provider, frequency, history and evidence collection controls",
     "weights": "Cycle Score sub-score weights (must sum to 1.0)",
     "label_thresholds": "Cycle Score -> label mapping thresholds",
     "signal_thresholds": "Signal trigger thresholds",

@@ -26,6 +26,159 @@ export interface StockWithScore {
   last_bar_date: string | null;
   day_change_pct: number | null;
   today_signals: string[];
+  exchange: string;
+  trading_currency: string;
+  listing_status: string;
+  sector: string | null;
+  business_type: string | null;
+  pilot_universe_member: boolean;
+  identity_history: StockIdentity[];
+}
+
+export interface StockIdentity {
+  id: number;
+  kind: "ticker" | "company_name" | "alias";
+  value: string;
+  exchange: string | null;
+  valid_from: string | null;
+  valid_to: string | null;
+  is_current: boolean;
+  source: string;
+}
+
+export interface StockProject {
+  id: number;
+  project_key: string;
+  name: string;
+  relationship_type: string;
+  ownership_pct: number | null;
+  operator_name: string | null;
+  effective_from: string | null;
+  effective_to: string | null;
+  asset_units: {
+    id: number;
+    name: string;
+    unit_type: string | null;
+    parent_asset_unit_id: number | null;
+  }[];
+}
+
+export interface ProjectRelationship {
+  id: number;
+  project_id: number;
+  stock_id: number;
+  relationship_type: string;
+  ownership_pct: number | null;
+  operator_name: string | null;
+  effective_from: string | null;
+  effective_to: string | null;
+  source: string;
+}
+
+export interface ProjectDetail {
+  id: number;
+  project_key: string;
+  name: string;
+  commodity: string | null;
+  region: string | null;
+  jurisdiction: string | null;
+  stage: string | null;
+  active: boolean;
+  asset_units: {
+    id: number;
+    name: string;
+    unit_type: string | null;
+    parent_asset_unit_id: number | null;
+    country: string | null;
+    region: string | null;
+    commodity_override: string | null;
+    ownership_override_pct: number | null;
+    operator_override: string | null;
+    active: boolean;
+  }[];
+  relationships: ProjectRelationship[];
+}
+
+export interface P01EntityProposal {
+  id: number;
+  stock_id: number;
+  target_level: "project" | "asset_unit";
+  proposed_project_name: string;
+  proposed_asset_name: string | null;
+  proposed_asset_type: string | null;
+  proposed_commodity: string | null;
+  proposed_ownership_pct: number | null;
+  proposed_operator: string | null;
+  source_type: string;
+  source_ref: string;
+  source_page: number | null;
+  source_excerpt: string;
+  status: "pending" | "approved" | "rejected" | "superseded";
+  reviewer: string | null;
+  reviewed_at: string | null;
+  review_note: string;
+  correction_json: string;
+  project_id: number | null;
+  asset_unit_id: number | null;
+}
+
+export interface P3UpdateProposalEvidence {
+  mention_id: number;
+  mapping_id: number;
+  announcement_id: number;
+  evidence_document_id: number;
+  p3_event_id: number | null;
+  p3_fact_id: number | null;
+  source_section: string;
+  source_page_start: number | null;
+  source_page_end: number | null;
+  mention_text_raw: string;
+  source_excerpt: string;
+  announcement: { id: number; ann_id: string; headline: string; ann_date: string; url: string } | null;
+  evidence_document: { id: number; title: string; page_count: number | null; pdf_url: string } | null;
+}
+
+export interface P3UpdateProposal {
+  id: number;
+  proposal_type: string;
+  status: "pending" | "approved" | "rejected" | "superseded";
+  stock_id: number;
+  stock: { id: number; code: string; name: string } | null;
+  proposed_name: string;
+  proposed_name_normalized: string | null;
+  proposed_entity_type: string | null;
+  proposed_project_name: string;
+  proposed_asset_name: string | null;
+  proposed_asset_type: string | null;
+  proposed_commodity: string | null;
+  proposed_parent_project_id: number | null;
+  candidate_parent_project: { id: number; name: string; project_key: string } | null;
+  proposed_payload: Record<string, unknown>;
+  supporting_announcement_count: number;
+  supporting_evidence_count: number;
+  supporting_event_count: number;
+  supporting_fact_count: number;
+  confidence: number | null;
+  created_by: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_note: string;
+  correction_history: Record<string, unknown>;
+  resulting_entity: { type: string; id: number; name: string; project_key?: string; project_id?: number } | null;
+  evidence: P3UpdateProposalEvidence[];
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface P01SourceSearchResult {
+  source_type: string;
+  source_id: string;
+  title: string;
+  url: string;
+  stock_id: number | null;
+  project_id: number | null;
+  source_page: number | null;
+  excerpt: string;
 }
 
 export interface PriceBar {
@@ -83,6 +236,288 @@ export interface Announcement {
         qualitative_contexts?: QualitativeContext[];
       })
     | null;
+  evidence_document_id?: number | null;
+  evidence_status?: string;
+  download_status?: string;
+  text_status?: string;
+  local_pdf_available?: boolean;
+  page_count?: number | null;
+  file_size_bytes?: number | null;
+  hash_prefix?: string | null;
+  fetched_at?: string | null;
+  evidence_error?: string | null;
+  evidence_retryable?: boolean;
+  document_category?: string;
+  official_header_type?: string | null;
+  official_subtype?: string | null;
+  standard_form?: string | null;
+  event_families?: string[];
+  event_labels?: string[];
+  revision_tags?: string[];
+  classification_source?: string;
+}
+
+export interface P3Event {
+  id: number;
+  event_id: number;
+  event_type: string;
+  event_family: string;
+  primary_family: string;
+  secondary_families: string[];
+  event_title: string;
+  event_status: string;
+  classification_status: string;
+  classification_source: string;
+  classification_confidence: number | null;
+  revision_tags: string[];
+  classification_reason: string;
+  active_result: boolean;
+  validity_status?: P3ValidityStatus;
+  display_validity_status?: P3ValidityStatus;
+  validity_reason?: string;
+  has_pending_version_relation?: boolean;
+  source_section: string;
+  source_page_start: number | null;
+  source_page_end: number | null;
+  source_excerpt: string;
+  confidence: number | null;
+  parse_run_id: number;
+  mapped_project_id?: number | null;
+  mapped_asset_unit_id?: number | null;
+  project_mapping_id?: number | null;
+  asset_unit_mapping_id?: number | null;
+  project_mapping_status?: "confirmed" | "review_needed" | "unknown";
+  asset_unit_mapping_status?: "confirmed" | "review_needed" | "unknown";
+  project: { id: number; name: string; project_key: string } | null;
+  asset_unit: { id: number; name: string } | null;
+  review_needed: boolean;
+}
+
+export interface P3ParseStatus {
+  announcement_id: string;
+  parse_status: string;
+  event_count: number;
+  fact_count: number;
+  information_point_count: number;
+  atomic_fact_count: number;
+  target_min: number;
+  target_max: number;
+  count_status: "source_insufficient" | "target_range" | "high_density";
+  source_insufficient: boolean;
+  summary_point_count: number;
+  standard_form_point_count: number;
+  body_fallback_point_count: number;
+  review_needed_count: number;
+  summary_coverage_ratio: number;
+  review_needed: boolean;
+  fact_extraction?: {
+    policy: string;
+    summary_priority: string[];
+    summary_bullet_count: number;
+    summary_fact_count: number;
+    fields_after_summary: string[];
+    missing_after_summary: string[];
+    standard_form_used: boolean;
+    standard_form_pages: number[];
+    standard_form_fact_count: number;
+    missing_after_standard_form: string[];
+    body_fallback_used: boolean;
+    body_fallback_pages: number[];
+    body_fallback_fact_count: number;
+    remaining_missing_fields: string[];
+    source_fact_counts: Record<string, number>;
+  };
+  information_point_grouping?: {
+    schema: string;
+    information_point_count: number;
+    atomic_fact_count: number;
+    grouped_fact_count: number;
+    all_facts_preserved: boolean;
+    point_types: Record<string, number>;
+    display_reduction: number;
+    no_padding: boolean;
+    no_truncation: boolean;
+  };
+  latest_parse_run?: { parser_version: string; source_scope: string; error_message: string | null } | null;
+}
+
+export interface P3InformationPointFact {
+  id: number;
+  fact_type: string;
+  field_name: string;
+  value_raw: string;
+  unit_raw: string | null;
+  status: string;
+  role: string;
+  display_order: number;
+  information_point_group_id: number | null;
+  information_point_type: string | null;
+  parent_fact_id: number | null;
+}
+
+export interface P3InformationPoint {
+  id: number;
+  event_id: number;
+  announcement_id: number | null;
+  evidence_document_id: number;
+  parse_run_id: number;
+  family: string;
+  point_type: string;
+  information_point_group_id: number;
+  information_point_type: string;
+  primary_fact_id: number | null;
+  point_title: string;
+  fact_count: number;
+  status: string;
+  source_section: string;
+  source_page_start: number | null;
+  source_page_end: number | null;
+  source_excerpt: string;
+  review_status: string;
+  active_result: boolean;
+  facts: P3InformationPointFact[];
+  project: { id: number; name: string; project_key: string } | null;
+  asset_unit: { id: number; name: string } | null;
+  created_at: string;
+}
+
+export interface P3Fact {
+  id: number;
+  event_id: number | null;
+  announcement_id: number | null;
+  evidence_document_id: number;
+  parse_run_id: number | null;
+  mapped_project_id?: number | null;
+  mapped_asset_unit_id?: number | null;
+  project_mapping_id?: number | null;
+  asset_unit_mapping_id?: number | null;
+  project_mapping_status?: "confirmed" | "review_needed" | "unknown";
+  asset_unit_mapping_status?: "confirmed" | "review_needed" | "unknown";
+  family: string;
+  fact_type: string;
+  field_name: string;
+  value_raw: string;
+  value_numeric: number | null;
+  value_text: string | null;
+  unit_raw: string | null;
+  unit_normalized: string | null;
+  currency_raw: string | null;
+  currency_normalized: string | null;
+  quantity_type: string;
+  period_start: string | null;
+  period_end: string | null;
+  as_of_date: string | null;
+  effective_date: string | null;
+  status: string;
+  project_attribution_status: string;
+  source_section: string;
+  source_page: number | null;
+  source_page_start: number | null;
+  source_page_end: number | null;
+  source_excerpt: string;
+  extractor_name: string;
+  extractor_version: string;
+  extraction_confidence: number | null;
+  review_status: string;
+  validity_status?: P3ValidityStatus;
+  display_validity_status?: P3ValidityStatus;
+  validity_reason?: string;
+  has_pending_version_relation?: boolean;
+  active_result: boolean;
+  information_point_group_id: number | null;
+  information_point_type: string | null;
+  parent_fact_id: number | null;
+  display_order: number | null;
+  event: { id: number; event_type: string; event_title: string; family: string } | null;
+  stock: { id: number; code: string; name: string } | null;
+  project: { id: number; name: string; project_key: string } | null;
+  asset_unit: { id: number; name: string } | null;
+  evidence_document: { id: number; title: string; source_url: string; page_count: number | null } | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export type P3ValidityStatus = "current" | "historical" | "superseded" | "withdrawn" | "correction_pending_review" | "rejected";
+
+export interface P3VersionObject {
+  id: number;
+  type: "event" | "fact" | "statement";
+  validity_status: P3ValidityStatus;
+  announcement_id?: number | null;
+  project_id?: number | null;
+  asset_unit_id?: number | null;
+  family?: string;
+  fact_type?: string;
+  field_name?: string;
+  event_type?: string;
+  title?: string;
+  value_raw?: string;
+}
+
+export interface P3VersionRelation {
+  id: number;
+  predecessor_type: "event" | "fact" | "statement";
+  predecessor_id: number;
+  successor_type: "event" | "fact" | "statement" | null;
+  successor_id: number | null;
+  relation_type: "corrects" | "restates" | "revises" | "replaces" | "supersedes" | "withdraws" | "retracts" | "related_to";
+  status: "proposed" | "confirmed" | "rejected";
+  source_announcement_id: number;
+  source_evidence_document_id: number;
+  source_page_start: number | null;
+  source_page_end: number | null;
+  source_excerpt: string;
+  withdrawal_reason: string;
+  detected_by: "parser" | "rule" | "model" | "manual";
+  confidence: number | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_note: string;
+  predecessor: P3VersionObject | null;
+  successor: P3VersionObject | null;
+  stock: { id: number; code: string; name: string } | null;
+  source_announcement: { id: number; ann_id: string; headline: string; ann_date: string; url: string } | null;
+  evidence_document: { id: number; title: string; page_count: number | null; pdf_url: string } | null;
+  change_log?: Array<{ id: number; action: string; before: Record<string, unknown>; after: Record<string, unknown>; reviewer: string; review_note: string; created_at: string }>;
+}
+
+export interface P3EntityMapping {
+  id: number;
+  entity_mention_id: number;
+  announcement_id: number;
+  evidence_document_id: number;
+  parse_run_id: number;
+  p3_event_id: number | null;
+  p3_fact_id: number | null;
+  mention_type: "stock" | "project" | "asset_unit" | "commodity";
+  mention_text_raw: string;
+  mention_text_normalized: string;
+  source_section: string;
+  source_page_start: number | null;
+  source_page_end: number | null;
+  source_page: number | null;
+  source_excerpt: string;
+  matched_entity_type: "stock" | "project" | "asset_unit" | "commodity";
+  matched_entity_id: number | null;
+  matched_entity: { id: number; type: string; name: string; code?: string; project_key?: string; project_id?: number } | null;
+  candidate_entity?: { id: number; type: string; name: string; code?: string; project_key?: string; project_id?: number } | null;
+  matched_alias: { id: number; value: string; kind: string; is_current: boolean } | null;
+  match_method: "exact_match" | "alias_match" | "former_name_match" | "unresolved_candidate" | "fuzzy_match" | "model_suggestion" | "manual_confirmation" | "p01_proposal_approved";
+  match_confidence: number;
+  status: "confirmed" | "review_needed" | "ambiguous" | "rejected" | "superseded";
+  stock_validation_result: string;
+  parent_validation_result: string;
+  matching_reason: string;
+  review_needed: boolean;
+  candidate_parent_project_id?: number | null;
+  proposal_id?: number | null;
+  candidate_payload?: Record<string, unknown>;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  review_note?: string;
+  human_locked?: boolean;
+  created_at: string;
+  updated_at: string | null;
 }
 
 export interface SignalReturn {
@@ -201,6 +636,79 @@ export interface PipelineRun {
   trigger: string;
   status: string;
   stats: Record<string, unknown>;
+  finished_at: string | null;
+  pipeline_type?: string;
+  provider?: string;
+  started_at?: string | null;
+  total_items?: number;
+  succeeded_items?: number;
+  skipped_items?: number;
+  failed_items?: number;
+  configuration_snapshot?: Record<string, unknown>;
+  error_summary?: string | null;
+}
+
+export interface BackfillPreview {
+  preview_token: string;
+  filters: Record<string, unknown>;
+  total_announcements: number;
+  skipped_count: number;
+  existing_pdf: number;
+  missing_pdf: number;
+  existing_raw_text: number;
+  missing_raw_text: number;
+  parsed: number;
+  unparsed: number;
+  estimated_downloads: number;
+  estimated_reparse: number;
+  possible_failure: number;
+  by_stock: Record<string, number>;
+  by_family: Record<string, number>;
+  actions: string[];
+  notice: string;
+  read_only: boolean;
+}
+
+export interface BackfillRun {
+  id: number;
+  started_at: string | null;
+  finished_at: string | null;
+  status: string;
+  requested_by: string;
+  parser_version: string;
+  pipeline_version: string;
+  total_announcements: number;
+  succeeded_announcements: number;
+  skipped_announcements: number;
+  partial_announcements: number;
+  failed_announcements: number;
+  downloaded_files: number;
+  extracted_texts: number;
+  parsed_documents: number;
+  created_events: number;
+  created_facts: number;
+  mapped_entities: number;
+  review_needed_count: number;
+  error_summary: string | null;
+  retry_of_run_id: number | null;
+}
+
+export interface BackfillRunItem {
+  id: number;
+  backfill_run_id: number;
+  announcement_id: number;
+  stock_id: number;
+  evidence_document_id: number | null;
+  status: string;
+  stage: string;
+  parser_version: string;
+  input_hash: string | null;
+  created_event_count: number;
+  created_fact_count: number;
+  mapped_count: number;
+  review_needed_count: number;
+  error_message: string | null;
+  started_at: string | null;
   finished_at: string | null;
 }
 

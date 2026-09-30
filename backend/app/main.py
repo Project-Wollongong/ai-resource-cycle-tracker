@@ -11,6 +11,8 @@ from .api.routes import (
     health,
     historical_analysis,
     positions,
+    p3,
+    projects,
     reports,
     signals,
     stocks,
@@ -57,8 +59,10 @@ for module in (
     reports,
     historical_analysis,
     positions,
+    projects,
     config_routes,
     admin,
     trade_reviews,
+    p3,
 ):
     app.include_router(module.router, prefix="/api")

@@ -11,10 +11,18 @@ data/*.db
 data/*.db-shm
 data/*.db-wal
 data/yfinance_cache/
+data/evidence/
+data/*.xlsx
 .env
 .DS_Store
 *.log
 ~$*
 *.tmp
+tmp/
+frontend/tsconfig.tsbuildinfo
+docs/changed github.md
+/P03_*_开发提示词.md
+/卧龙岗项目_Beta02_*_Draft_*.md
+/卧龙岗项目_Beta02_架构讨论完整整理稿.docx
 sprintworkings.md
 backend/requirements.txt

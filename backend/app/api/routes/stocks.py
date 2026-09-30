@@ -1,9 +1,11 @@
 import json
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, joinedload, selectinload
 
-from ...models import Announcement, PriceBar, ScoreSnapshot, Signal, Stock
+from ...models import Announcement, PriceBar, Project, ScoreSnapshot, Signal, Stock, StockProject
 from ...schemas import (
     AnnouncementOut,
     Message,
@@ -13,7 +15,12 @@ from ...schemas import (
     StockCreate,
     StockUpdate,
     StockWithScore,
+    StockIdentityInput,
+    StockIdentityOut,
+    StockProjectOut,
+    IdentityKind,
 )
+from ...services import stock_identity as identity
 from ...services.watchlist import build_stock_view
 from ..deps import get_db
 from ..serializers import announcement_out, signal_out
@@ -22,18 +29,28 @@ router = APIRouter(prefix="/stocks", tags=["stocks"])
 
 
 def _get_stock_or_404(db: Session, code: str) -> Stock:
-    stock = db.query(Stock).filter_by(code=code.upper()).one_or_none()
+    try:
+        stock = identity.find_current_or_historical(db, code)
+    except identity.IdentityConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if stock is None:
         raise HTTPException(status_code=404, detail=f"stock {code.upper()} not found")
     return stock
 
 
 @router.get("", response_model=list[StockWithScore])
-def list_stocks(active: bool | None = True, db: Session = Depends(get_db)):
-    q = db.query(Stock)
+def list_stocks(active: bool | None = True, q: str | None = None,
+                pilot_universe_member: bool | None = None, db: Session = Depends(get_db)):
+    query = db.query(Stock)
     if active is not None:
-        q = q.filter_by(active=active)
-    stocks = q.order_by(Stock.code).all()
+        query = query.filter_by(active=active)
+    if pilot_universe_member is not None:
+        query = query.filter_by(pilot_universe_member=pilot_universe_member)
+    stocks = query.order_by(Stock.code).all()
+    if q and identity.normalize(q):
+        term = identity.normalize(q)
+        stocks = [s for s in stocks if any(term in identity.normalize(value) for value in
+                  [s.code, s.name, *(r.value for r in s.identity_history)])]
     views = [build_stock_view(db, s) for s in stocks]
     views.sort(key=lambda v: v.latest_score.cycle_score if v.latest_score else -1, reverse=True)
     return views
@@ -41,27 +58,94 @@ def list_stocks(active: bool | None = True, db: Session = Depends(get_db)):
 
 @router.post("", response_model=StockWithScore, status_code=201)
 def create_stock(payload: StockCreate, db: Session = Depends(get_db)):
-    code = payload.code.strip().upper()
-    existing = db.query(Stock).filter_by(code=code).one_or_none()
-    if existing is not None:
-        if not existing.active:  # re-activate a soft-deleted stock
+    try:
+        code = identity.ticker(payload.code)
+        identity.validate_interval(payload.identity_effective_from, None)
+        existing = db.query(Stock).filter_by(code=code).one_or_none()
+        if existing is not None:
+            if existing.active:
+                raise identity.IdentityConflict(f"stock {code} already exists")
+            identity.change_current_identity(db, existing, name=payload.name,
+                exchange=payload.exchange if "exchange" in payload.model_fields_set else None,
+                effective_from=payload.identity_effective_from)
             existing.active = True
-            existing.name = payload.name
-            existing.commodity = payload.commodity
-            existing.stage = payload.stage
-            db.commit()
-            return build_stock_view(db, existing)
-        raise HTTPException(status_code=409, detail=f"stock {code} already exists")
-    stock = Stock(
-        code=code,
-        name=payload.name.strip(),
-        commodity=payload.commodity.strip(),
-        stage=payload.stage.strip(),
-        notes=payload.notes.strip(),
+            existing.commodity, existing.stage = payload.commodity, payload.stage
+            stock = existing
+            for field in ("trading_currency", "listing_status", "sector", "business_type", "pilot_universe_member"):
+                if field in payload.model_fields_set:
+                    setattr(stock, field, getattr(payload, field))
+        else:
+            identity.assert_new_stock_identity(db, code, payload.name)
+            stock = Stock(**payload.model_dump(exclude={"identity_effective_from", "code", "name"}),
+                          code=code, name=identity.clean(payload.name))
+            db.add(stock)
+            identity.ensure_current_identities(db, stock, source="api_create")
+            for row in stock.identity_history:
+                row.valid_from = payload.identity_effective_from
+        db.commit()
+        return build_stock_view(db, stock)
+    except (ValueError, IntegrityError) as exc:
+        _identity_error(db, exc)
+
+
+def _identity_error(db: Session, exc: Exception):
+    db.rollback()
+    conflict = isinstance(exc, (identity.IdentityConflict, IntegrityError))
+    detail = "identity conflicts with an existing record" if isinstance(exc, IntegrityError) else str(exc)
+    raise HTTPException(status_code=409 if conflict else 422, detail=detail) from exc
+
+
+@router.get("/resolve", response_model=StockWithScore)
+def resolve_stock(identifier: str, as_of: date | None = None, kind: IdentityKind | None = None,
+                  exchange: str | None = None, db: Session = Depends(get_db)):
+    try:
+        stock = identity.resolve_stock(db, identifier, as_of=as_of, kind=kind, exchange=exchange)
+    except identity.IdentityConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if stock is None:
+        raise HTTPException(status_code=404, detail="stock identity not found")
+    return build_stock_view(db, stock, include_components=True)
+
+
+@router.get("/{code}/identities", response_model=list[StockIdentityOut])
+def stock_identities(code: str, db: Session = Depends(get_db)):
+    return _get_stock_or_404(db, code).identity_history
+
+
+@router.get("/{code}/projects", response_model=list[StockProjectOut])
+def stock_projects(code: str, db: Session = Depends(get_db)):
+    stock = _get_stock_or_404(db, code)
+    links = (
+        db.query(StockProject)
+        .options(selectinload(StockProject.project).selectinload(Project.asset_units))
+        .filter_by(stock_id=stock.id)
+        .all()
     )
-    db.add(stock)
-    db.commit()
-    return build_stock_view(db, stock)
+    return [
+        {
+            "id": link.project.id,
+            "project_key": link.project.project_key,
+            "name": link.project.name,
+            "relationship_type": link.relationship_type,
+            "ownership_pct": link.ownership_pct,
+            "operator_name": next((r.operator_name for r in reversed(link.project.relationship_history) if r.stock_id == stock.id and r.effective_to is None), None),
+            "effective_from": link.effective_from,
+            "effective_to": link.effective_to,
+            "asset_units": link.project.asset_units,
+        }
+        for link in links
+    ]
+
+
+@router.post("/{code}/identities", response_model=StockIdentityOut, status_code=201)
+def add_stock_identity(code: str, payload: StockIdentityInput, db: Session = Depends(get_db)):
+    stock = _get_stock_or_404(db, code)
+    try:
+        row = identity.add_history(db, stock, **payload.model_dump())
+        db.commit()
+        return row
+    except (ValueError, IntegrityError) as exc:
+        _identity_error(db, exc)
 
 
 @router.get("/{code}", response_model=StockWithScore)
@@ -73,20 +157,28 @@ def get_stock(code: str, db: Session = Depends(get_db)):
 @router.put("/{code}", response_model=StockWithScore)
 def update_stock(code: str, payload: StockUpdate, db: Session = Depends(get_db)):
     stock = _get_stock_or_404(db, code)
-    for field in ("name", "commodity", "stage", "notes", "active"):
-        value = getattr(payload, field)
-        if value is not None:
-            setattr(stock, field, value)
-    if payload.resource_score_override is not None:
-        stock.resource_score_override = payload.resource_score_override
-    if payload.risk_score_override is not None:
-        stock.risk_score_override = payload.risk_score_override
-    if payload.clear_resource_override:
-        stock.resource_score_override = None
-    if payload.clear_risk_override:
-        stock.risk_score_override = None
-    db.commit()
-    return build_stock_view(db, stock, include_components=True)
+    try:
+        identity.change_current_identity(db, stock, code=payload.code, name=payload.name,
+            exchange=payload.exchange, effective_from=payload.identity_effective_from)
+        for field in ("commodity", "stage", "notes", "active", "trading_currency",
+                      "listing_status", "sector", "business_type", "pilot_universe_member"):
+            value = getattr(payload, field)
+            if value is not None:
+                setattr(stock, field, value.upper() if field == "trading_currency" else value)
+            elif field in {"sector", "business_type"} and field in payload.model_fields_set:
+                setattr(stock, field, None)
+        if payload.resource_score_override is not None:
+            stock.resource_score_override = payload.resource_score_override
+        if payload.risk_score_override is not None:
+            stock.risk_score_override = payload.risk_score_override
+        if payload.clear_resource_override:
+            stock.resource_score_override = None
+        if payload.clear_risk_override:
+            stock.risk_score_override = None
+        db.commit()
+        return build_stock_view(db, stock, include_components=True)
+    except (ValueError, IntegrityError) as exc:
+        _identity_error(db, exc)
 
 
 @router.delete("/{code}", response_model=Message)

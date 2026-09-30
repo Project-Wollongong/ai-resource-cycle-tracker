@@ -1,0 +1,41 @@
+{
+  "version": "P01-Baseline-v1",
+  "status": "source_backed_frozen_pending_human_signoff",
+  "frozen_at": "2026-09-26",
+  "authority": "ASX PDF source IDs, page/excerpt retained in database",
+  "counts": {
+    "evidence_documents": 10,
+    "projects": 9,
+    "project_identities": 9,
+    "stock_projects": 9,
+    "project_relationships": 2,
+    "asset_units": 5,
+    "asset_unit_identities": 5,
+    "commodity_relationships": 13
+  },
+  "human_signoff": {
+    "status": "pending",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  "relationship_facts": [
+    {
+      "project_key": "rincon-lithium",
+      "relationship_type": "jv_interest",
+      "ownership_pct": 77.5,
+      "operator_name": null,
+      "source": "asx:2924-03116443-6A1336571",
+      "source_page": 1,
+      "source_excerpt": "77.5% JV interest, earning up to 90%"
+    },
+    {
+      "project_key": "nova-joint-venture",
+      "relationship_type": "operator_reference",
+      "ownership_pct": null,
+      "operator_name": "RMR",
+      "source": "asx:2924-03130488-6A1341768",
+      "source_page": 1,
+      "source_excerpt": "RMR (65% equity interest and current manager"
+    }
+  ]
+}

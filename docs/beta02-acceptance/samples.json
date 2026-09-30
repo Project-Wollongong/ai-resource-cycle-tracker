@@ -1,0 +1,1778 @@
+{
+  "schema_version": 1,
+  "dataset_version": "beta02-stage0-candidate-v1",
+  "status": "pending_human_review",
+  "created_at": "2026-09-24",
+  "page_numbering": "physical PDF page, one-based; printed Appendix page may differ",
+  "expectation_scope": "Key-fact regression floor, not exhaustive proof of all Summary facts",
+  "currency_policy": "Retain literal $ where no ISO currency is stated in the cited scope; do not silently infer AUD. Explicit A$ / $A are AUD.",
+  "samples": [
+    {
+      "ticker": "CVV",
+      "headline": "DFS Revised Completion Timing",
+      "asx_announcement_id": "2924-03136859-6A1344354",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03136859-6A1344354",
+      "published_at": "2026-09-18 09:10:53.000000",
+      "sample_id": "S01",
+      "sha256": "48de74c15471745929da95741947f67eab15f5f744ba9ea08a45f84d708fc33c",
+      "page_count": 4,
+      "http_status": 200,
+      "checked_at": "2026-09-24T10:26:56.883329+00:00",
+      "bytes": 211278,
+      "asx_official_category": "PROGRESS REPORT",
+      "asx_raw_metadata": {
+        "announcementType": "PROGRESS REPORT",
+        "date": "2026-09-17T23:10:53.000Z",
+        "documentKey": "2924-03136859-6A1344354",
+        "fileSize": "185KB",
+        "headline": "DFS Revised Completion Timing",
+        "isPriceSensitive": true,
+        "url": ""
+      },
+      "local_pdf": "pdfs/S01.pdf",
+      "source_review": {
+        "reviewer": "Codex",
+        "method": "PDF text plus rendered page visual inspection",
+        "date": "2026-09-24",
+        "pages": [
+          1
+        ]
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewed_at": null,
+        "notes": null
+      },
+      "document_type": "Project / DFS timing update",
+      "summary_region": "PDF 第 1 页 Highlights 六个项目符号；止于 Managing Director 引述之前",
+      "expected_events": [
+        {
+          "family": "F04",
+          "event_type": "Project Delay",
+          "status": "reported"
+        },
+        {
+          "family": "F04",
+          "event_type": "Project Schedule / Timeline Update",
+          "status": "reported"
+        },
+        {
+          "family": "F03",
+          "event_type": "Metallurgical Testwork Planned / Commenced",
+          "status": "planned"
+        }
+      ],
+      "entity_candidates": [
+        "Caravel Copper Project"
+      ],
+      "facts": [
+        {
+          "field": "dfs_release_timing",
+          "expected_value": {
+            "previous": "September 2026",
+            "revised": "Q4 2026"
+          },
+          "unit": null,
+          "family": "F04",
+          "source_excerpt": "rescheduled to the fourth quarter of 2026, from the September 2026 timing previously advised.",
+          "pdf_page": 1,
+          "location": "Highlights 第 1 条",
+          "scope": "summary",
+          "qualifier": "计划披露时间改变；不是 DFS 已完成",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S01-F01"
+        },
+        {
+          "field": "metallurgical_testwork_objectives",
+          "expected_value": "进一步改善铜精矿品位及回收率；制备铜和钼精矿供营销；重测样品以确认金银回收率",
+          "unit": null,
+          "family": "F03",
+          "source_excerpt": "Further metallurgical testwork will build on the simplified flowsheet",
+          "pdf_page": 1,
+          "location": "Highlights 第 2 条",
+          "scope": "summary",
+          "qualifier": "计划工作；未报告新的回收率数值",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S01-F02"
+        },
+        {
+          "field": "groundwater_modelling",
+          "expected_value": "Yarragadee / Leederville 数值模拟拟支持 Gillingarra H3 报告及 DWER 受理",
+          "unit": null,
+          "family": null,
+          "source_excerpt": "Numerical groundwater modelling of the Yarragadee and Leederville aquifers will be completed",
+          "pdf_page": 1,
+          "location": "Highlights 第 3 条",
+          "scope": "summary",
+          "qualifier": "待完成；不是地下水许可已授予",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S01-F03"
+        },
+        {
+          "field": "environmental_review_document",
+          "expected_value": "ERD 拟更新调查结果和供水模型后提交 EPA",
+          "unit": null,
+          "family": null,
+          "source_excerpt": "The Environmental Review Document (ERD) will be updated",
+          "pdf_page": 1,
+          "location": "Highlights 第 4 条",
+          "scope": "summary",
+          "qualifier": "未来工作；不是环保审批已通过",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S01-F04"
+        },
+        {
+          "field": "plant_capital_estimate_review",
+          "expected_value": "公司拟在纳入 study 前全面审核并接受流程厂资本成本估算",
+          "unit": null,
+          "family": "F04",
+          "source_excerpt": "The process plant capital cost estimate will be fully reviewed and accepted by the Company",
+          "pdf_page": 1,
+          "location": "Highlights 第 5 条",
+          "scope": "summary",
+          "qualifier": "未给出 CAPEX 数值",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S01-F05"
+        },
+        {
+          "field": "fid_target",
+          "expected_value": "end of 2027",
+          "unit": null,
+          "family": "F04",
+          "source_excerpt": "Final Investment Decision (FID) targeted for the end of 2027.",
+          "pdf_page": 1,
+          "location": "Highlights 第 6 条",
+          "scope": "summary",
+          "qualifier": "目标时间，非已作出投资决定",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S01-F06"
+        }
+      ],
+      "must_not": [
+        "因 DFS 字样输出利好、80 分或研究已完成",
+        "将未来 funding / JV partnering 当作已签融资或 JV",
+        "将 revised timing 自动标为历史披露更正/撤回",
+        "自行计算延期天数"
+      ]
+    },
+    {
+      "ticker": "AGY",
+      "headline": "Quarterly Activities/Appendix 5B Cash Flow Report",
+      "asx_announcement_id": "2924-03116443-6A1336571",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03116443-6A1336571",
+      "published_at": "2026-07-31 09:44:04.000000",
+      "sample_id": "S02",
+      "sha256": "3f166da63eb384d1c722cefd4f661c78bf30579762b34e3bf075658cce3017dd",
+      "page_count": 15,
+      "http_status": 200,
+      "checked_at": "2026-09-24T10:27:02.208633+00:00",
+      "bytes": 829915,
+      "asx_official_category": "QUARTERLY ACTIVITIES REPORT",
+      "asx_raw_metadata": {
+        "announcementType": "QUARTERLY ACTIVITIES REPORT",
+        "date": "2026-07-30T23:44:04.000Z",
+        "documentKey": "2924-03116443-6A1336571",
+        "fileSize": "688KB",
+        "headline": "Quarterly Activities/Appendix 5B Cash Flow Report",
+        "isPriceSensitive": true,
+        "url": ""
+      },
+      "local_pdf": "pdfs/S02.pdf",
+      "source_review": {
+        "reviewer": "Codex",
+        "method": "PDF text plus rendered page visual inspection",
+        "date": "2026-09-24",
+        "pages": [
+          1,
+          11,
+          12,
+          13
+        ]
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewed_at": null,
+        "notes": null
+      },
+      "document_type": "Quarterly Activities Report + Appendix 5B",
+      "summary_region": "PDF 第 1 页 HIGHLIGHTS 五条；现金表在 PDF 第 11–13 页，不属于默认摘要范围",
+      "expected_events": [
+        {
+          "family": "F04",
+          "event_type": "Engineering / FEED Update",
+          "status": "ongoing"
+        },
+        {
+          "family": "F03",
+          "event_type": "Metallurgical Testwork Update",
+          "status": "reported"
+        }
+      ],
+      "reference_events": [
+        {
+          "family": "F08",
+          "event_type": "Period-end Cash Position",
+          "status": "reported"
+        },
+        {
+          "family": "F08",
+          "event_type": "Periodic Cash Flow Update",
+          "status": "reported"
+        }
+      ],
+      "entity_candidates": [
+        "Rincon Lithium Project",
+        "Tonopah Lithium Project"
+      ],
+      "facts": [
+        {
+          "field": "project_development",
+          "expected_value": "Rincon 12ktpa 项目的可研与工程工作推进中",
+          "unit": "ktpa",
+          "family": "F04",
+          "source_excerpt": "12ktpa project development progressing with feasibility and engineering works",
+          "pdf_page": 1,
+          "location": "HIGHLIGHTS 第 1 条",
+          "scope": "summary",
+          "qualifier": "设计/开发规模；非实际年产量",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S02-F01"
+        },
+        {
+          "field": "process_testwork",
+          "expected_value": "与国际技术服务商开展工艺测试，为 DFS 设计、设备尺寸与经济评估提供数据",
+          "unit": null,
+          "family": "F03",
+          "source_excerpt": "Process testwork programs conducted with international technology providers",
+          "pdf_page": 1,
+          "location": "HIGHLIGHTS 第 2 条",
+          "scope": "summary",
+          "qualifier": null,
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S02-F02"
+        },
+        {
+          "field": "quarter_end",
+          "expected_value": "2026-06-30",
+          "unit": null,
+          "family": "F08",
+          "source_excerpt": "30 June 2026",
+          "pdf_page": 11,
+          "location": "Appendix 5B 封面 Quarter ended",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S02-F03"
+        },
+        {
+          "field": "net_operating_cash_flow",
+          "expected_value": -220,
+          "unit": "AUD thousand",
+          "family": "F08",
+          "source_excerpt": "(220) (415)",
+          "pdf_page": 11,
+          "location": "Appendix 5B item 1.9，Current quarter 列",
+          "scope": "reference_only",
+          "qualifier": "本季 -220；YTD 六个月 -415，不混列",
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S02-F04"
+        },
+        {
+          "field": "net_investing_cash_flow",
+          "expected_value": -1282,
+          "unit": "AUD thousand",
+          "family": "F08",
+          "source_excerpt": "(1,282) (1,744)",
+          "pdf_page": 12,
+          "location": "Appendix 5B item 2.6，Current quarter 列",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S02-F05"
+        },
+        {
+          "field": "net_financing_cash_flow",
+          "expected_value": -5,
+          "unit": "AUD thousand",
+          "family": "F08",
+          "source_excerpt": "(5) (40)",
+          "pdf_page": 12,
+          "location": "Appendix 5B item 3.10，Current quarter 列",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S02-F06"
+        },
+        {
+          "field": "cash_and_cash_equivalents",
+          "expected_value": 2060,
+          "unit": "AUD thousand",
+          "family": "F08",
+          "source_excerpt": "2,060 2,060",
+          "pdf_page": 13,
+          "location": "Appendix 5B item 4.6；item 5.5 亦可复核",
+          "scope": "reference_only",
+          "qualifier": "截至 2026-06-30；不是 2,060 AUD",
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S02-F07"
+        },
+        {
+          "field": "rincon_interest",
+          "expected_value": "77.5% JV interest, earning up to 90%",
+          "unit": null,
+          "family": null,
+          "source_excerpt": "77.5% JV interest, earning up to 90%",
+          "pdf_page": 1,
+          "location": "第 1 页摘要之后 Rincon 小标题",
+          "scope": "reference_only",
+          "qualifier": "P01 研究候选；90% 是 earning up to，不是当前持股",
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S02-F08"
+        }
+      ],
+      "must_not": [
+        "仅凭 Quarterly 标签认定摘要含现金数字",
+        "将 Appendix 表格数据假装来自 Highlights",
+        "把 cash flow 当现金余额",
+        "计算现金跑道或 burn；把意向评估当签署战略交易"
+      ]
+    },
+    {
+      "ticker": "AGY",
+      "headline": "Successful $3M Placement and SPP launched",
+      "asx_announcement_id": "2924-03130574-6A1341758",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03130574-6A1341758",
+      "published_at": "2026-09-02 09:35:54.000000",
+      "sample_id": "S03",
+      "sha256": "e45852e34688882f9c00815eeed9029ae7efc69865626996ac1ea9eec1f0f0c1",
+      "page_count": 4,
+      "http_status": 200,
+      "checked_at": "2026-09-24T10:27:05.184191+00:00",
+      "bytes": 433367,
+      "asx_official_category": "ISSUED CAPITAL",
+      "asx_raw_metadata": {
+        "announcementType": "ISSUED CAPITAL",
+        "date": "2026-09-01T23:35:54.000Z",
+        "documentKey": "2924-03130574-6A1341758",
+        "fileSize": "397KB",
+        "headline": "Successful $3M Placement and SPP launched",
+        "isPriceSensitive": true,
+        "url": ""
+      },
+      "local_pdf": "pdfs/S03.pdf",
+      "source_review": {
+        "reviewer": "Codex",
+        "method": "PDF text plus rendered page visual inspection",
+        "date": "2026-09-24",
+        "pages": [
+          1
+        ]
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewed_at": null,
+        "notes": null
+      },
+      "document_type": "Placement and SPP announcement",
+      "summary_region": "PDF 第 1 页 HIGHLIGHTS 三条，横线以内；发行价及数量在横线下正文",
+      "expected_events": [
+        {
+          "family": "F06",
+          "event_type": "Placement",
+          "status": "firm_commitments"
+        },
+        {
+          "family": "F06",
+          "event_type": "Share Purchase Plan / SPP",
+          "status": "planned"
+        }
+      ],
+      "entity_candidates": [
+        "Rincon Lithium Project"
+      ],
+      "facts": [
+        {
+          "field": "placement_amount",
+          "expected_value": 3,
+          "unit": "million dollars (source $)",
+          "family": "F06",
+          "source_excerpt": "The $3M placement attracted strong interest",
+          "pdf_page": 1,
+          "location": "HIGHLIGHTS 第 1 条",
+          "scope": "summary",
+          "qualifier": "正文限定为 firm commitments / before costs；不可标到账",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S03-F01"
+        },
+        {
+          "field": "use_of_funds",
+          "expected_value": "推进 12ktpa Rincon 开发、工程及可研",
+          "unit": null,
+          "family": "F06",
+          "source_excerpt": "Placement proceeds to support priority initiatives including progressing 12ktpa",
+          "pdf_page": 1,
+          "location": "HIGHLIGHTS 第 2 条",
+          "scope": "summary",
+          "qualifier": null,
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S03-F02"
+        },
+        {
+          "field": "spp_status",
+          "expected_value": "拟推出，合资格股东可按 placement 相同条件参与",
+          "unit": null,
+          "family": "F06",
+          "source_excerpt": "Share Purchase Plan to be launched",
+          "pdf_page": 1,
+          "location": "HIGHLIGHTS 第 3 条",
+          "scope": "summary",
+          "qualifier": null,
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S03-F03"
+        },
+        {
+          "field": "placement_issue_price",
+          "expected_value": 0.036,
+          "unit": "dollars/share (source $)",
+          "family": "F06",
+          "source_excerpt": "at $0.036 per share",
+          "pdf_page": 1,
+          "location": "第 1 页 HIGHLIGHTS 下正文",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S03-F04"
+        },
+        {
+          "field": "placement_new_shares",
+          "expected_value": 83333334,
+          "unit": "shares",
+          "family": "F06",
+          "source_excerpt": "83,333,334 fully paid ordinary shares",
+          "pdf_page": 1,
+          "location": "第 1 页正文",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S03-F05"
+        },
+        {
+          "field": "spp_target",
+          "expected_value": 500000,
+          "unit": "dollars (source $)",
+          "family": "F06",
+          "source_excerpt": "up to an additional $500,000",
+          "pdf_page": 1,
+          "location": "第 1 页正文",
+          "scope": "reference_only",
+          "qualifier": "上限、非包销；不是已募集",
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S03-F06"
+        }
+      ],
+      "must_not": [
+        "融资用途提及项目开发便新增实际施工/钻探事件",
+        "把募集承诺当结算完成",
+        "系统计算折价或稀释；输出 successful 投资结论"
+      ]
+    },
+    {
+      "ticker": "CYL",
+      "headline": "Trident Reserve grows by 30%",
+      "asx_announcement_id": "2924-03134886-6A1343577",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03134886-6A1343577",
+      "published_at": "2026-09-14 08:24:19.000000",
+      "sample_id": "S04",
+      "sha256": "d47bb8d74c88a5122771323a57f3328a81dcfdbea13e2c757242ec75cb9c779a",
+      "page_count": 16,
+      "http_status": 200,
+      "checked_at": "2026-09-24T10:27:09.917697+00:00",
+      "bytes": 905631,
+      "asx_official_category": "PROGRESS REPORT",
+      "asx_raw_metadata": {
+        "announcementType": "PROGRESS REPORT",
+        "date": "2026-09-13T22:24:19.000Z",
+        "documentKey": "2924-03134886-6A1343577",
+        "fileSize": "779KB",
+        "headline": "Trident Reserve grows by 30%",
+        "isPriceSensitive": true,
+        "url": ""
+      },
+      "local_pdf": "pdfs/S04.pdf",
+      "source_review": {
+        "reviewer": "Codex",
+        "method": "PDF text plus rendered page visual inspection",
+        "date": "2026-09-24",
+        "pages": [
+          1
+        ]
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewed_at": null,
+        "notes": null
+      },
+      "document_type": "Ore Reserve update",
+      "summary_region": "PDF 第 1 页主栏标题下、金色横线上方的十条摘要项目符号；不含左侧公司简介/页脚或下方储量表",
+      "expected_events": [
+        {
+          "family": "F02",
+          "event_type": "Ore Reserve Update",
+          "status": "reported"
+        },
+        {
+          "family": "F04",
+          "event_type": "Construction Progress Update",
+          "status": "reported"
+        },
+        {
+          "family": "F04",
+          "event_type": "Project Schedule / Timeline Update",
+          "status": "planned"
+        }
+      ],
+      "entity_candidates": [
+        "Trident",
+        "Plutonic Gold Belt"
+      ],
+      "facts": [
+        {
+          "field": "trident_underground_reserve",
+          "expected_value": {
+            "contained_gold": 524,
+            "grade": 4.2
+          },
+          "unit": "koz Au; g/t Au",
+          "family": "F02",
+          "source_excerpt": "524koz at 4.2g/t Au",
+          "pdf_page": 1,
+          "location": "首页摘要第 1 条",
+          "scope": "summary",
+          "qualifier": "Reserve，不是 Resource",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S04-F01"
+        },
+        {
+          "field": "company_reported_reserve_increase",
+          "expected_value": 32,
+          "unit": "%",
+          "family": "F02",
+          "source_excerpt": "increased by 32%",
+          "pdf_page": 1,
+          "location": "首页摘要第 1 条",
+          "scope": "summary",
+          "qualifier": "公司明确报告；标题 30% 与摘要 32% 分开保留，不自行改为 30",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S04-F02"
+        },
+        {
+          "field": "mine_life_and_production_plan",
+          "expected_value": {
+            "mine_life": "approximately 10 years",
+            "annual_production": "60–80 koz"
+          },
+          "unit": null,
+          "family": "F04",
+          "source_excerpt": "steady state annual production rate of 60-80koz",
+          "pdf_page": 1,
+          "location": "首页摘要第 1 条",
+          "scope": "summary",
+          "qualifier": "预计稳态年产，非当前实际产量",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S04-F03"
+        },
+        {
+          "field": "previously_reported_resource",
+          "expected_value": {
+            "date": "June 2026",
+            "contained_gold": "1.1 Moz",
+            "grade": "5.4 g/t Au"
+          },
+          "unit": null,
+          "family": "F02",
+          "source_excerpt": "1.1Moz at 5.4g/t Au",
+          "pdf_page": 1,
+          "location": "首页摘要第 3 条",
+          "scope": "summary",
+          "qualifier": "引用过去 Resource，不是本次新资源事件",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S04-F04"
+        },
+        {
+          "field": "inferred_resource_gold",
+          "expected_value": 448,
+          "unit": "koz Au",
+          "family": "F02",
+          "source_excerpt": "at Trident are 448koz",
+          "pdf_page": 1,
+          "location": "首页摘要第 4 条",
+          "scope": "summary",
+          "qualifier": null,
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S04-F05"
+        },
+        {
+          "field": "development_completed",
+          "expected_value": 250,
+          "unit": "m",
+          "family": "F04",
+          "source_excerpt": "250m of development completed",
+          "pdf_page": 1,
+          "location": "首页摘要第 6 条",
+          "scope": "summary",
+          "qualifier": null,
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S04-F06"
+        },
+        {
+          "field": "first_ore_expected",
+          "expected_value": "CY2027",
+          "unit": null,
+          "family": "F04",
+          "source_excerpt": "First ore is expected in CY2027",
+          "pdf_page": 1,
+          "location": "首页摘要第 6 条",
+          "scope": "summary",
+          "qualifier": "预计而非已投产",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S04-F07"
+        },
+        {
+          "field": "probable_reserve_tonnage",
+          "expected_value": 3.9,
+          "unit": "Mt",
+          "family": "F02",
+          "source_excerpt": "Probable 3.9 4.2 524",
+          "pdf_page": 1,
+          "location": "第 1 页主栏储量表 Probable 行",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S04-F08"
+        }
+      ],
+      "must_not": [
+        "将历史 75% 转换率当本次计算结果",
+        "因摘要中引用 June 资源而生成新的 MRE 公告",
+        "混入左侧公司全体资产数据作为 Trident 数据"
+      ]
+    },
+    {
+      "ticker": "WC8",
+      "headline": "CONTINUED STRONG DRILL RESULTS",
+      "asx_announcement_id": "2924-03128755-6A1341087",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128755-6A1341087",
+      "published_at": "2026-08-31 08:02:59.000000",
+      "sample_id": "S05",
+      "sha256": "18cb777f4d463d33e174b4d039e882fcccc004f56d068126e7fcc286bd8e1f73",
+      "page_count": 24,
+      "http_status": 200,
+      "checked_at": "2026-09-24T10:27:20.077984+00:00",
+      "bytes": 2458591,
+      "asx_official_category": "PROGRESS REPORT",
+      "asx_raw_metadata": {
+        "announcementType": "PROGRESS REPORT",
+        "date": "2026-08-30T22:02:59.000Z",
+        "documentKey": "2924-03128755-6A1341087",
+        "fileSize": "2110KB",
+        "headline": "CONTINUED STRONG DRILL RESULTS",
+        "isPriceSensitive": true,
+        "url": ""
+      },
+      "local_pdf": "pdfs/S05.pdf",
+      "source_review": {
+        "reviewer": "Codex",
+        "method": "PDF text plus rendered page visual inspection",
+        "date": "2026-09-24",
+        "pages": [
+          1
+        ]
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewed_at": null,
+        "notes": null
+      },
+      "document_type": "Drilling results",
+      "summary_region": "PDF 第 1 页 Highlights 全部，含 Bolt Cutter Central / Tabba Tabba 子标题，止于页底横线",
+      "expected_events": [
+        {
+          "family": "F01",
+          "event_type": "Drilling Results / Assay Results",
+          "status": "reported"
+        },
+        {
+          "family": "F07",
+          "event_type": "Project / Asset Acquisition",
+          "status": "reported"
+        },
+        {
+          "family": "F04",
+          "event_type": "Study Update / Revision",
+          "status": "ongoing"
+        },
+        {
+          "family": "F08",
+          "event_type": "Period-end Cash Position",
+          "status": "reported"
+        }
+      ],
+      "entity_candidates": [
+        "Bolt Cutter Central",
+        "Tabba Tabba",
+        "Hutt",
+        "Chewy",
+        "Leia"
+      ],
+      "facts": [
+        {
+          "field": "bcrc115_intersections",
+          "expected_value": [
+            {
+              "width_m": 8,
+              "grade_pct": 1.5,
+              "from_m": 89
+            },
+            {
+              "width_m": 16,
+              "grade_pct": 1.5,
+              "from_m": 116
+            }
+          ],
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "8m @ 1.5% Li2O from 89m",
+          "pdf_page": 1,
+          "location": "Highlights / Bolt Cutter Central / BCRC115",
+          "scope": "summary",
+          "qualifier": "两条均为 est. true width；Li2O",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F01"
+        },
+        {
+          "field": "bcrc113_intersection",
+          "expected_value": {
+            "width_m": 18,
+            "grade_pct": 1.1,
+            "from_m": 16
+          },
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "18m @ 1.1% Li2O from 16m",
+          "pdf_page": 1,
+          "location": "Highlights / BCRC113",
+          "scope": "summary",
+          "qualifier": "est. true width",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F02"
+        },
+        {
+          "field": "bcrc112_intersections",
+          "expected_value": [
+            {
+              "width_m": 11,
+              "grade_pct": 1.5,
+              "from_m": 67
+            },
+            {
+              "width_m": 6,
+              "grade_pct": 1.5,
+              "from_m": 174
+            }
+          ],
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "11m @ 1.5% Li2O from 67m",
+          "pdf_page": 1,
+          "location": "Highlights / BCRC112",
+          "scope": "summary",
+          "qualifier": "两条均为 est. true width",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F03"
+        },
+        {
+          "field": "bcrc123_intersection",
+          "expected_value": {
+            "width_m": 4,
+            "grade_pct": 1.6,
+            "from_m": 104
+          },
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "4m @ 1.6% Li2O from 104m",
+          "pdf_page": 1,
+          "location": "Highlights / BCRC123",
+          "scope": "summary",
+          "qualifier": "est. true width",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F04"
+        },
+        {
+          "field": "bcrc116_intersection",
+          "expected_value": {
+            "width_m": 6,
+            "grade_pct": 1.0,
+            "from_m": 85
+          },
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "6m @ 1.0% Li2O from 85m",
+          "pdf_page": 1,
+          "location": "Highlights / BCRC116",
+          "scope": "summary",
+          "qualifier": "est. true width",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F05"
+        },
+        {
+          "field": "tamt038_intersection",
+          "expected_value": {
+            "width_m": 25.1,
+            "grade_pct": 1.2,
+            "from_m": 56.5
+          },
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "25.1m @ 1.2% Li2O from 56.5m",
+          "pdf_page": 1,
+          "location": "Highlights / Tabba Tabba / Hutt / TAMT038",
+          "scope": "summary",
+          "qualifier": "est. true width",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F06"
+        },
+        {
+          "field": "tamt040_intersections",
+          "expected_value": [
+            {
+              "width_m": 21.4,
+              "grade_pct": 0.9,
+              "from_m": 22.6
+            },
+            {
+              "included_width_m": 8.6,
+              "grade_pct": 1.4,
+              "from_m": 28.6
+            }
+          ],
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "8.6m @ 1.4% Li2O from 28.6m",
+          "pdf_page": 1,
+          "location": "Highlights / Hutt / TAMT040",
+          "scope": "summary",
+          "qualifier": "包括区间不可丢失；母区间标 est. true width",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F07"
+        },
+        {
+          "field": "tamt036_intersections",
+          "expected_value": [
+            {
+              "reported_width_m": 13.9,
+              "grade_pct": 2.0,
+              "from_m": 45.2,
+              "estimated_true_width_m": 10.0
+            },
+            {
+              "included_reported_width_m": 7.8,
+              "grade_pct": 2.3,
+              "from_m": 45.2,
+              "estimated_true_width_m": 5.6
+            }
+          ],
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "13.9m @ 2.0% Li2O from 45.2m",
+          "pdf_page": 1,
+          "location": "Highlights / Chewy / TAMT036",
+          "scope": "summary",
+          "qualifier": "报告区间长度与估计真厚度分别保存；不要求正式 Hole 层级",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F08"
+        },
+        {
+          "field": "tarc435_intersections",
+          "expected_value": [
+            {
+              "reported_width_m": 18,
+              "grade_pct": 1.3,
+              "from_m": 69,
+              "estimated_true_width_m": 16.4
+            },
+            {
+              "included_reported_width_m": 9,
+              "grade_pct": 2.0,
+              "from_m": 74,
+              "estimated_true_width_m": 8.2
+            }
+          ],
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "18m @ 1.3% Li2O from 69m",
+          "pdf_page": 1,
+          "location": "Highlights / Leia / TARC435",
+          "scope": "summary",
+          "qualifier": null,
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F09"
+        },
+        {
+          "field": "maiden_mre_target",
+          "expected_value": "Q4 2026",
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "maiden Mineral Resource Estimate expected in Q4 2026",
+          "pdf_page": 1,
+          "location": "Highlights / Bolt Cutter Central 进度",
+          "scope": "summary",
+          "qualifier": "未来计划；不生成已发布 MRE 的 F02 事件",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F10"
+        },
+        {
+          "field": "lct_rights_acquired",
+          "expected_value": "E45/2364",
+          "unit": null,
+          "family": "F07",
+          "source_excerpt": "Wildcat acquired the LCT Rights for E45/2364",
+          "pdf_page": 1,
+          "location": "Highlights 尾部第 1 条",
+          "scope": "summary",
+          "qualifier": "LCT rights，不扩张成整个项目所有权",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F11"
+        },
+        {
+          "field": "dfs_delivery_target",
+          "expected_value": "H2 2026",
+          "unit": null,
+          "family": "F04",
+          "source_excerpt": "on track for delivery H2 2026",
+          "pdf_page": 1,
+          "location": "Highlights 尾部第 2 条",
+          "scope": "summary",
+          "qualifier": null,
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F12"
+        },
+        {
+          "field": "cash_balance",
+          "expected_value": {
+            "value": 37.2,
+            "as_of": "2026-06-30"
+          },
+          "unit": "million dollars (source $)",
+          "family": "F08",
+          "source_excerpt": "$37.2M cash as at 30 June 2026",
+          "pdf_page": 1,
+          "location": "Highlights 最后 1 条",
+          "scope": "summary",
+          "qualifier": null,
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S05-F13"
+        }
+      ],
+      "must_not": [
+        "只抽第一条或前十条区间",
+        "将 metallurgy drilling 当冶金回收率结果",
+        "将未来 MRE 误判已发布 F02",
+        "计算品位×厚度、强弱或历史百分位"
+      ]
+    },
+    {
+      "ticker": "GL1",
+      "headline": "Manna Clearing Permit and Groundwater Licence secured",
+      "asx_announcement_id": "2924-03123369-6A1339377",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03123369-6A1339377",
+      "published_at": "2026-08-20 08:59:12.000000",
+      "sample_id": "S06",
+      "sha256": "5150d0fa1ebdc68305778b2820eab0c33443250d0e991281a0058f1524b0646d",
+      "page_count": 4,
+      "http_status": 200,
+      "checked_at": "2026-09-24T10:27:22.862761+00:00",
+      "bytes": 429417,
+      "asx_official_category": "PROGRESS REPORT",
+      "asx_raw_metadata": {
+        "announcementType": "PROGRESS REPORT",
+        "date": "2026-08-19T22:59:12.000Z",
+        "documentKey": "2924-03123369-6A1339377",
+        "fileSize": "357KB",
+        "headline": "Manna Clearing Permit and Groundwater Licence secured",
+        "isPriceSensitive": true,
+        "url": ""
+      },
+      "local_pdf": "pdfs/S06.pdf",
+      "source_review": {
+        "reviewer": "Codex",
+        "method": "PDF text plus rendered page visual inspection",
+        "date": "2026-09-24",
+        "pages": [
+          1
+        ]
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewed_at": null,
+        "notes": null
+      },
+      "document_type": "Project permitting update",
+      "summary_region": null,
+      "expected_events": [],
+      "reference_events": [
+        {
+          "family": "F05",
+          "event_type": "Environmental Approval Granted",
+          "status": "reported"
+        },
+        {
+          "family": "F05",
+          "event_type": "Water / Infrastructure / Other Statutory Permit",
+          "status": "technical_support"
+        }
+      ],
+      "entity_candidates": [
+        "Manna Lithium Project"
+      ],
+      "facts": [
+        {
+          "field": "clearing_permit_status",
+          "expected_value": "approved and effective; no appeals",
+          "unit": null,
+          "family": "F05",
+          "source_excerpt": "approved and has taken effect, with no appeals received",
+          "pdf_page": 1,
+          "location": "第 1 页首段",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S06-F01"
+        },
+        {
+          "field": "groundwater_licence_status",
+          "expected_value": "DWER technical support for grant",
+          "unit": null,
+          "family": "F05",
+          "source_excerpt": "confirmed technical support for the grant of the Manna Groundwater Licence",
+          "pdf_page": 1,
+          "location": "第 1 页首段",
+          "scope": "reference_only",
+          "qualifier": "原文字样；不从标题推定正式 grant",
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S06-F02"
+        },
+        {
+          "field": "clearing_permit_id",
+          "expected_value": "CPS 11464/1",
+          "unit": null,
+          "family": "F05",
+          "source_excerpt": "Purpose Permit CPS 11464/1",
+          "pdf_page": 1,
+          "location": "第 1 页第 3 段",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S06-F03"
+        },
+        {
+          "field": "clearing_authorisation",
+          "expected_value": {
+            "max_area_ha": 875,
+            "expiry": "2031-08-19",
+            "term_years": 5
+          },
+          "unit": null,
+          "family": "F05",
+          "source_excerpt": "up to 875 hectares",
+          "pdf_page": 1,
+          "location": "第 1 页第 4 段",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S06-F04"
+        },
+        {
+          "field": "works_approval",
+          "expected_value": "expected before end of September 2026 quarter",
+          "unit": null,
+          "family": "F05",
+          "source_excerpt": "The remaining Works Approval is well progressed",
+          "pdf_page": 1,
+          "location": "第 1 页第 5 段",
+          "scope": "reference_only",
+          "qualifier": "尚待取得",
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S06-F05"
+        }
+      ],
+      "must_not": [
+        "没有 Summary/Highlights 就偷偷全文解析并声称属于默认摘要",
+        "标题 secured 等同全部许可正式签发",
+        "把 remaining Works Approval 标已完成"
+      ]
+    },
+    {
+      "ticker": "DYL",
+      "headline": "Nova Joint Venture, Namibia - A$5m Earn-In By Core Energy",
+      "asx_announcement_id": "2924-03130488-6A1341768",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03130488-6A1341768",
+      "published_at": "2026-09-02 08:55:54.000000",
+      "sample_id": "S07",
+      "sha256": "855aa6178dce91190f038bbec5d074d3221baeecfa1e7a1564af3a518c4f77b9",
+      "page_count": 3,
+      "http_status": 200,
+      "checked_at": "2026-09-24T10:27:32.621254+00:00",
+      "bytes": 3268239,
+      "asx_official_category": "PROGRESS REPORT",
+      "asx_raw_metadata": {
+        "announcementType": "PROGRESS REPORT",
+        "date": "2026-09-01T22:55:54.000Z",
+        "documentKey": "2924-03130488-6A1341768",
+        "fileSize": "3189KB",
+        "headline": "Nova Joint Venture, Namibia - A$5m Earn-In By Core Energy",
+        "isPriceSensitive": false,
+        "url": ""
+      },
+      "local_pdf": "pdfs/S07.pdf",
+      "source_review": {
+        "reviewer": "Codex",
+        "method": "PDF text plus rendered page visual inspection",
+        "date": "2026-09-24",
+        "pages": [
+          1
+        ]
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewed_at": null,
+        "notes": null
+      },
+      "document_type": "JV earn-in agreement",
+      "summary_region": "PDF 第 1 页蓝色 Highlights 框两条；不含框下正文",
+      "expected_events": [
+        {
+          "family": "F07",
+          "event_type": "Farm-in / Farm-out",
+          "status": "reported"
+        }
+      ],
+      "entity_candidates": [
+        "Nova Joint Venture",
+        "Nova Energy (Namibia) (Proprietary) Limited"
+      ],
+      "facts": [
+        {
+          "field": "earn_in_terms",
+          "expected_value": {
+            "expenditure_aud_million": 5,
+            "maximum_interest_pct": 51,
+            "phases": 2
+          },
+          "unit": null,
+          "family": "F07",
+          "source_excerpt": "Two phase, A$5M earn-in",
+          "pdf_page": 1,
+          "location": "Highlights 第 1 条",
+          "scope": "summary",
+          "qualifier": "up to / 条件性取得，不是当前已持有 51%",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S07-F01"
+        },
+        {
+          "field": "jv_manager_and_funding",
+          "expected_value": "Core Energy Minerals Limited；earn-in 期间担任 Manager，并承担全部勘探支出及运营",
+          "unit": null,
+          "family": "F07",
+          "source_excerpt": "Core Energy will be appointed as the Manager",
+          "pdf_page": 1,
+          "location": "Highlights 第 2 条",
+          "scope": "summary",
+          "qualifier": "原文角色是 Manager；未确认与 Operator 等价，不自动生成 Operator Change 或修改 P01 operator",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S07-F02"
+        },
+        {
+          "field": "phase_1_terms",
+          "expected_value": {
+            "interest_pct": 25,
+            "spend_aud_million": 2,
+            "months": 18
+          },
+          "unit": null,
+          "family": "F07",
+          "source_excerpt": "Phase 1 - Core Energy can acquire a 25% interest",
+          "pdf_page": 1,
+          "location": "第 1 页正文 Phase 1",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S07-F03"
+        },
+        {
+          "field": "phase_2_terms",
+          "expected_value": {
+            "additional_interest_pct": 26,
+            "spend_aud_million": 3,
+            "months_after_phase_1": 24
+          },
+          "unit": null,
+          "family": "F07",
+          "source_excerpt": "Phase 2 - Core Energy can acquire a further 26%",
+          "pdf_page": 1,
+          "location": "第 1 页正文 Phase 2",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S07-F04"
+        },
+        {
+          "field": "current_jv_interests",
+          "expected_value": {
+            "RMR": 65,
+            "Nova Africa": 25,
+            "Sixzone": 10
+          },
+          "unit": "%",
+          "family": "F07",
+          "source_excerpt": "RMR (65% equity interest and current manager",
+          "pdf_page": 1,
+          "location": "第 1 页正文 Current shareholders",
+          "scope": "reference_only",
+          "qualifier": "P01 关系候选；RMR 是 DYL 子公司，不能直接把 DYL 当项目全资所有人",
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S07-F05"
+        }
+      ],
+      "must_not": [
+        "写成收款 A$5M 已到账",
+        "自动把 P01 ownership 改成 51%",
+        "把未来分阶段权益替代当前权益"
+      ]
+    },
+    {
+      "ticker": "EL8",
+      "headline": "Change of Director's Interest Notice",
+      "asx_announcement_id": "2924-03134678-6A1343454",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03134678-6A1343454",
+      "published_at": "2026-09-11 16:41:39.000000",
+      "sample_id": "S08",
+      "sha256": "308acf1ce125ef2fccef323b79c7ba7ac388bc780c50ee86e81baf2fe14d5aee",
+      "page_count": 4,
+      "http_status": 200,
+      "checked_at": "2026-09-24T10:27:35.788682+00:00",
+      "bytes": 587364,
+      "asx_official_category": "SECURITY HOLDER DETAILS",
+      "asx_raw_metadata": {
+        "announcementType": "SECURITY HOLDER DETAILS",
+        "date": "2026-09-11T06:41:39.000Z",
+        "documentKey": "2924-03134678-6A1343454",
+        "fileSize": "570KB",
+        "headline": "Change of Director's Interest Notice",
+        "isPriceSensitive": false,
+        "url": ""
+      },
+      "local_pdf": "pdfs/S08.pdf",
+      "source_review": {
+        "reviewer": "Codex",
+        "method": "PDF text plus rendered page visual inspection",
+        "date": "2026-09-24",
+        "pages": [
+          1
+        ]
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewed_at": null,
+        "notes": null
+      },
+      "document_type": "Appendix 3Y - Change of Director’s Interest Notice",
+      "summary_region": null,
+      "expected_events": [],
+      "non_core_bucket": "Ownership / Governance",
+      "entity_candidates": [],
+      "facts": [
+        {
+          "field": "form_type",
+          "expected_value": "Appendix 3Y",
+          "unit": null,
+          "family": null,
+          "source_excerpt": "Appendix 3Y",
+          "pdf_page": 1,
+          "location": "第 1 页表单标题",
+          "scope": "routing_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S08-F01"
+        },
+        {
+          "field": "director",
+          "expected_value": "Murray Hill",
+          "unit": null,
+          "family": null,
+          "source_excerpt": "Name of Director Murray Hill",
+          "pdf_page": 1,
+          "location": "第 1 页 Name of Director",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S08-F02"
+        },
+        {
+          "field": "date_of_change",
+          "expected_value": "2026-09-11",
+          "unit": null,
+          "family": null,
+          "source_excerpt": "Date of change 11 September 2026",
+          "pdf_page": 1,
+          "location": "第 1 页 Part 1 最后一行",
+          "scope": "reference_only",
+          "qualifier": null,
+          "required_in_pilot": false,
+          "origin": "reported",
+          "fact_id": "S08-F03"
+        }
+      ],
+      "must_not": [
+        "因为 Interest / securities 字样认作项目所有权变更或融资 F06",
+        "为非核心表单创建矿业 Project/Asset Unit",
+        "把董事权益变动当买入或利好信号"
+      ]
+    },
+    {
+      "ticker": "WC8",
+      "headline": "POSITIVE METALLURGY TESTWORK FROM BOLT CUTTER CENTRAL",
+      "asx_announcement_id": "2924-03108404-6A1332742",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03108404-6A1332742",
+      "published_at": "2026-07-07 08:34:39.000000",
+      "sample_id": "S09",
+      "sha256": "6aa640eba76d557ceefc7d8bfa98ed4f570dfe9165affde4dca0bb79a1df4716",
+      "page_count": 25,
+      "http_status": 200,
+      "checked_at": "2026-09-24T10:27:56.570512+00:00",
+      "bytes": 2198963,
+      "asx_official_category": "PROGRESS REPORT",
+      "asx_raw_metadata": {
+        "announcementType": "PROGRESS REPORT",
+        "date": "2026-07-06T22:34:39.000Z",
+        "documentKey": "2924-03108404-6A1332742",
+        "fileSize": "1761KB",
+        "headline": "POSITIVE METALLURGY TESTWORK FROM BOLT CUTTER CENTRAL",
+        "isPriceSensitive": true,
+        "url": ""
+      },
+      "local_pdf": "pdfs/S09.pdf",
+      "source_review": {
+        "reviewer": "Codex",
+        "method": "PDF text plus rendered page visual inspection",
+        "date": "2026-09-24",
+        "pages": [
+          1
+        ]
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewed_at": null,
+        "notes": null
+      },
+      "document_type": "Metallurgy testwork and drilling update",
+      "summary_region": "PDF 第 1 页 Highlights 全部，止于 Figure 1 图片上方横线",
+      "expected_events": [
+        {
+          "family": "F03",
+          "event_type": "Metallurgical Test Results",
+          "status": "reported"
+        },
+        {
+          "family": "F01",
+          "event_type": "Drilling Results / Assay Results",
+          "status": "reported"
+        },
+        {
+          "family": "F01",
+          "event_type": "Drilling Completed",
+          "status": "reported"
+        },
+        {
+          "family": "F08",
+          "event_type": "Period-end Cash Position",
+          "status": "reported"
+        }
+      ],
+      "entity_candidates": [
+        "Bolt Cutter Central",
+        "Tabba Tabba"
+      ],
+      "facts": [
+        {
+          "field": "metallurgy_results",
+          "expected_value": {
+            "average_recovery_pct": 82.5,
+            "average_product_grade_pct_li2o": 5.66,
+            "composites": 3
+          },
+          "unit": null,
+          "family": "F03",
+          "source_excerpt": "Average recovery of 82.5% with an average product grade of 5.66% Li2O generated from three composites",
+          "pdf_page": 1,
+          "location": "Highlights 第 1 条子项",
+          "scope": "summary",
+          "qualifier": "sighter testwork / 三个复合样；不是全矿实际生产回收率",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S09-F01"
+        },
+        {
+          "field": "process_route",
+          "expected_value": "Whole of Ore Flotation",
+          "unit": null,
+          "family": "F03",
+          "source_excerpt": "same Whole of Ore Flotation method",
+          "pdf_page": 1,
+          "location": "Highlights 第 1 条子项",
+          "scope": "summary",
+          "qualifier": "同拟用于 Tabba Tabba 的方法",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S09-F02"
+        },
+        {
+          "field": "bcdd007_intersections",
+          "expected_value": [
+            {
+              "width_m": 7.1,
+              "grade_pct": 1.3,
+              "from_m": 20.8
+            },
+            {
+              "width_m": 4.3,
+              "grade_pct": 1.4,
+              "from_m": 29.9
+            }
+          ],
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "7.1m @ 1.3% Li2O from 20.8m",
+          "pdf_page": 1,
+          "location": "Highlights / BCDD007",
+          "scope": "summary",
+          "qualifier": "est. true width",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S09-F03"
+        },
+        {
+          "field": "bcdd009_intersection",
+          "expected_value": {
+            "width_m": 5.6,
+            "grade_pct": 1.6,
+            "from_m": 149.9
+          },
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "5.6m @ 1.6% Li2O from 149.9m",
+          "pdf_page": 1,
+          "location": "Highlights / BCDD009",
+          "scope": "summary",
+          "qualifier": "est. true width",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S09-F04"
+        },
+        {
+          "field": "bcdd018_intersection",
+          "expected_value": {
+            "width_m": 7.7,
+            "grade_pct": 1.1,
+            "from_m": 7.4
+          },
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "7.7m @ 1.1% Li2O from 7.4m",
+          "pdf_page": 1,
+          "location": "Highlights / BCDD018",
+          "scope": "summary",
+          "qualifier": "est. true width",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S09-F05"
+        },
+        {
+          "field": "bcrc071_intersection",
+          "expected_value": {
+            "width_m": 7.0,
+            "grade_pct": 1.1,
+            "from_m": 7.0
+          },
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "7.0m @ 1.1% Li2O from 7.0m",
+          "pdf_page": 1,
+          "location": "Highlights / BCRC071",
+          "scope": "summary",
+          "qualifier": "est. true width",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S09-F06"
+        },
+        {
+          "field": "bcrc079_intersection",
+          "expected_value": {
+            "width_m": 5.0,
+            "grade_pct": 1.4,
+            "from_m": 65.0
+          },
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "5.0m @ 1.4% Li2O from 65.0m",
+          "pdf_page": 1,
+          "location": "Highlights / BCRC079",
+          "scope": "summary",
+          "qualifier": "est. true width",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S09-F07"
+        },
+        {
+          "field": "resource_drilling_status",
+          "expected_value": "RC drilling complete; resource modelling underway; estimation/reporting Q3",
+          "unit": null,
+          "family": "F01",
+          "source_excerpt": "Resource RC drilling complete",
+          "pdf_page": 1,
+          "location": "Highlights 倒数第 2 条",
+          "scope": "summary",
+          "qualifier": "不是已发布资源量",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S09-F08"
+        },
+        {
+          "field": "cash_balance",
+          "expected_value": {
+            "value": 43.3,
+            "as_of": "2026-03-31"
+          },
+          "unit": "million dollars (source $)",
+          "family": "F08",
+          "source_excerpt": "$43.3M cash as at 31 March 2026",
+          "pdf_page": 1,
+          "location": "Highlights 最后 1 条",
+          "scope": "summary",
+          "qualifier": null,
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S09-F09"
+        }
+      ],
+      "must_not": [
+        "只识别标题 F03 而漏掉 F01 / F08",
+        "将 recovery 82.5% 与 grade 5.66% 互换",
+        "将原文 excellent / positive 当模型评级",
+        "计算与 S05 的现金消耗率"
+      ]
+    },
+    {
+      "ticker": "DRE",
+      "headline": "Yin Rare Earths Mining Lease Application, Gifford Creek",
+      "asx_announcement_id": "2924-03128764-6A1341100",
+      "pdf_url": "https://asx.api.markitdigital.com/asx-research/1.0/file/2924-03128764-6A1341100",
+      "published_at": "2026-08-31 08:04:54.000000",
+      "sample_id": "S10",
+      "sha256": "552b9ec7b7af10d9e9df8945a120f2c53e6b2f03cd47c0eb7a68c3995a44124d",
+      "page_count": 7,
+      "http_status": 200,
+      "checked_at": "2026-09-24T10:29:47.216438+00:00",
+      "bytes": 1234231,
+      "asx_official_category": "PROGRESS REPORT",
+      "asx_raw_metadata": {
+        "announcementType": "PROGRESS REPORT",
+        "date": "2026-08-30T22:04:54.000Z",
+        "documentKey": "2924-03128764-6A1341100",
+        "fileSize": "1118KB",
+        "headline": "Yin Rare Earths Mining Lease Application, Gifford Creek",
+        "isPriceSensitive": true,
+        "url": ""
+      },
+      "local_pdf": "pdfs/S10.pdf",
+      "source_review": {
+        "reviewer": "Codex",
+        "method": "PDF text plus rendered page visual inspection",
+        "date": "2026-09-24",
+        "pages": [
+          1
+        ]
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewed_at": null,
+        "notes": null
+      },
+      "document_type": "Mining lease application",
+      "summary_region": "PDF 第 1 页 HIGHLIGHTS 三条；止于橙色横线",
+      "expected_events": [
+        {
+          "family": "F05",
+          "event_type": "Mining Lease Application",
+          "status": "submitted"
+        },
+        {
+          "family": "F04",
+          "event_type": "Study Update / Revision",
+          "status": "ongoing"
+        }
+      ],
+      "entity_candidates": [
+        "Yin",
+        "Gifford Creek Critical Metals Project"
+      ],
+      "facts": [
+        {
+          "field": "mining_lease_application",
+          "expected_value": "submitted for Yin Rare Earth deposits",
+          "unit": null,
+          "family": "F05",
+          "source_excerpt": "A mining lease application has been submitted",
+          "pdf_page": 1,
+          "location": "HIGHLIGHTS 第 1 条",
+          "scope": "summary",
+          "qualifier": "application；不是 granted",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S10-F01"
+        },
+        {
+          "field": "existing_resource",
+          "expected_value": {
+            "tonnage_mt": 29.98,
+            "grade_pct_treo": 1.04,
+            "measured_indicated_pct": "approximately 88"
+          },
+          "unit": null,
+          "family": "F02",
+          "source_excerpt": "29.98Mt @ 1.04% TREO",
+          "pdf_page": 1,
+          "location": "HIGHLIGHTS 第 2 条",
+          "scope": "summary",
+          "qualifier": "申请依据的既有资源，不产生本次新 MRE 事件",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S10-F02"
+        },
+        {
+          "field": "existing_high_grade_resource",
+          "expected_value": {
+            "tonnage_mt": 11.63,
+            "grade_pct_treo": 1.93,
+            "reported_classification": "approximately 94% Measured & Inferred"
+          },
+          "unit": null,
+          "family": "F02",
+          "source_excerpt": "11.63Mt @ 1.93% TREO",
+          "pdf_page": 1,
+          "location": "HIGHLIGHTS 第 2 条",
+          "scope": "summary",
+          "qualifier": "原文写 Measured & Inferred；不得自动更正成 Indicated",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S10-F03"
+        },
+        {
+          "field": "supporting_infrastructure",
+          "expected_value": "application allows for open pit mine and haul operation infrastructure",
+          "unit": null,
+          "family": "F05",
+          "source_excerpt": "supporting infrastructure for an open pit mine and haul operation",
+          "pdf_page": 1,
+          "location": "HIGHLIGHTS 第 2 条",
+          "scope": "summary",
+          "qualifier": "申请范围，不是矿山已建成",
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S10-F04"
+        },
+        {
+          "field": "study_and_approval_work",
+          "expected_value": "ongoing at Gifford Creek",
+          "unit": null,
+          "family": "F04",
+          "source_excerpt": "part of ongoing study and approval related works",
+          "pdf_page": 1,
+          "location": "HIGHLIGHTS 第 3 条",
+          "scope": "summary",
+          "qualifier": null,
+          "required_in_pilot": true,
+          "origin": "reported",
+          "fact_id": "S10-F05"
+        }
+      ],
+      "must_not": [
+        "Mining Lease Application 识别成 Mining Lease Grant",
+        "既有资源引用误作新资源发布",
+        "把正文、背景页的所有元素自动设为 P01 经济暴露"
+      ]
+    }
+  ]
+}

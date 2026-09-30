@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     )
 
     db_path: str = str(BASE_DIR / "data" / "tracker.db")
+    evidence_root: str = str(BASE_DIR / "data" / "evidence")
     timezone: str = "Australia/Sydney"
 
     # data sources — the markitdigital gateway is what asx.com.au itself uses;
