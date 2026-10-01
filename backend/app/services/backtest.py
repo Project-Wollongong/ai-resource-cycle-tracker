@@ -239,6 +239,13 @@ def backtest_summary(session: Session, group_by: str = "signal_type", source: st
     )
     unavailable_by_group: dict[str, int] = defaultdict(int)
     signal_ids: set[int] = set()
+    signal_days: set[tuple[int, date]] = set()
+    # One stock-day yields one entry price, so every signal fired that day has
+    # an identical forward return. Counting each of them would inflate n and
+    # overstate confidence — most visibly under group_by=label/score_bucket,
+    # where same-day signals all land in the same group. Dedupe per
+    # (group, horizon, stock, day): these are duplicate rows, not observations.
+    seen: set[tuple[str, int, int, date]] = set()
 
     group_cache: dict[int, str] = {}
     for sr, sig in q.all():
@@ -248,7 +255,12 @@ def backtest_summary(session: Session, group_by: str = "signal_type", source: st
         if sr.status == "unavailable":
             unavailable_by_group[key] += 1
             continue
+        dedupe_key = (key, sr.horizon_days, sig.stock_id, sig.date)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
         signal_ids.add(sig.id)
+        signal_days.add((sig.stock_id, sig.date))
         grouped[key][sr.horizon_days].append((sr.return_pct, sr.benchmark_return_pct))
 
     horizons = (5, 20, 60, 120)
@@ -281,5 +293,6 @@ def backtest_summary(session: Session, group_by: str = "signal_type", source: st
         "group_by": group_by,
         "source": source,
         "total_signals": len(signal_ids),
+        "total_signal_days": len(signal_days),
         "groups": groups,
     }

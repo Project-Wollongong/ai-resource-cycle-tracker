@@ -829,6 +829,9 @@ class BacktestSummary(BaseModel):
     group_by: str
     source: str
     total_signals: int
+    # distinct stock-days behind those signals; a day that fired several
+    # signals is one observation, not several
+    total_signal_days: int
     groups: list[BacktestGroup]
 
 

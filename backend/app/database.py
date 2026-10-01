@@ -239,6 +239,14 @@ def _apply_lightweight_migrations() -> None:
         conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_p01_entity_proposals_proposal_type ON p01_entity_proposals(proposal_type)")
         conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_p01_entity_proposals_proposed_parent_project_id ON p01_entity_proposals(proposed_parent_project_id)")
         conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS uq_p01_pending_proposal_dedupe ON p01_entity_proposals(dedupe_key) WHERE status = 'pending'")
+        signal_columns = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(signals)")}
+        for name, definition in {
+            "event_key": "VARCHAR(80)",
+            "role": "VARCHAR(10) NOT NULL DEFAULT 'primary'",
+        }.items():
+            if name not in signal_columns:
+                conn.exec_driver_sql(f"ALTER TABLE signals ADD COLUMN {name} {definition}")
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_signals_event_key ON signals(event_key)")
         evidence_columns = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(evidence_documents)")}
         evidence_additions = {
             "source_url": "TEXT NOT NULL DEFAULT ''",

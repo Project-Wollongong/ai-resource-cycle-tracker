@@ -18,7 +18,7 @@ from app.analysis.scoring import (
     label_for,
     risk_score,
 )
-from app.models import Announcement, AnalyticalSignal, AttentionState, FusionRecord, PriceBar, ScoreSnapshot, Stock, TradeDecision
+from app.models import Announcement, AnalyticalSignal, AttentionState, FusionRecord, PriceBar, ScoreSnapshot, Signal, Stock, TradeDecision
 from app.services.scoring_service import score_and_signal_stock
 from app.services.config_service import DEFAULTS
 
@@ -417,7 +417,19 @@ def test_score_and_signal_stock_writes_p5_p6_compat_records_idempotently(db_sess
     assert sorted({row.engine for row in analytical}) == ["catalyst", "fundamental", "technical"]
     assert len(analytical) == 3
     assert {row.logic_version for row in analytical} == {"cycle_score_adapter_v1"}
-    assert any(row.dependency_group == "announcement:p56-drill" for row in analytical)
+    # The drilling announcement drives both the fundamental and catalyst
+    # engines. That is one event, so it must occupy one dependency group —
+    # otherwise P6 reads a single announcement as two independent
+    # confirmations. source_event_id still carries the document id.
+    assert {row.source_event_id for row in analytical} == {
+        "announcement:p56-drill",
+        "signal:1",
+    }
+    by_engine = {row.engine: row.dependency_group for row in analytical}
+    event_group = f"announcement_event:{eval_date.isoformat()}:exploration"
+    assert by_engine["fundamental"] == event_group
+    assert by_engine["catalyst"] == event_group
+    assert by_engine["technical"] == f"market:{eval_date.isoformat()}"
 
     fusion = db_session.query(FusionRecord).filter_by(stock_id=stock.id, fusion_date=eval_date).one()
     assert fusion.rule_version == "fusion_adapter_v1"
@@ -491,3 +503,48 @@ def test_cycle_score_weighted_sum():
 )
 def test_label_thresholds(score, expected):
     assert label_for(score, DEFAULTS["label_thresholds"]) == expected
+
+
+def test_neutral_signals_do_not_count_toward_confirmation(db_session):
+    """A watch_only rule is recorded but must not make its engine look like a
+    second, independent opinion — otherwise a rule the backtest says is not
+    predictive would manufacture confirmation."""
+    from app.services.p5_p6_adapter import _engines
+
+    stock = Stock(code="NEU", name="Neutral Co", commodity="gold")
+    db_session.add(stock)
+    db_session.commit()
+
+    rows = [
+        AnalyticalSignal(
+            stock_id=stock.id,
+            signal_date=date(2026, 3, 2),
+            engine="catalyst",
+            direction="positive",
+            magnitude=70.0,
+        ),
+        AnalyticalSignal(
+            stock_id=stock.id,
+            signal_date=date(2026, 3, 2),
+            engine="technical",
+            direction="neutral",
+            magnitude=30.0,
+        ),
+    ]
+    db_session.add_all(rows)
+    db_session.commit()
+    ids = [row.id for row in rows]
+
+    # the neutral technical row is stored, but only the catalyst engine counts
+    assert db_session.query(AnalyticalSignal).filter(AnalyticalSignal.id.in_(ids)).count() == 2
+    assert _engines(db_session, ids) == {"catalyst"}
+
+
+def test_breakout_252d_carries_the_lowest_technical_weight():
+    """Window length is not strength: the longest window measured the worst."""
+    from app.services.p5_p6_adapter import _technical_magnitude
+
+    def magnitude(signal_type):
+        return _technical_magnitude(Signal(signal_type=signal_type, evidence="{}"))
+
+    assert magnitude("BREAKOUT_252D") < magnitude("BREAKOUT_60D")

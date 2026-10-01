@@ -140,3 +140,74 @@ def detect_score_cross(
             },
         )
     return None
+
+
+# A 60-day breakout already requires 1.5x relative volume, so a breakout and a
+# volume spike on the same day are one price-action event observed twice, not
+# two independent confirmations (Beta02 8.2). Group them under one mechanism
+# and mark the strongest as primary; both rows are kept, so no evidence is
+# destroyed and consumers can pick their own counting rule.
+MECHANISM_BY_SIGNAL_TYPE = {
+    "BREAKOUT_252D": "price_action",
+    "BREAKOUT_60D": "price_action",
+    "REL_VOL_SPIKE": "price_action",
+    "KEY_ANNOUNCEMENT": "announcement",
+}
+# lower sorts first = primary within its mechanism
+_PRIMARY_PRIORITY = {
+    "BREAKOUT_252D": 0,
+    "BREAKOUT_60D": 1,
+    "REL_VOL_SPIKE": 2,
+    "KEY_ANNOUNCEMENT": 0,
+}
+
+
+def mechanism_for(signal_type: str) -> str:
+    return MECHANISM_BY_SIGNAL_TYPE.get(signal_type, "other")
+
+
+def assign_event_roles(
+    candidates: list[SignalCandidate],
+) -> list[tuple[SignalCandidate, str, str]]:
+    """Return [(candidate, mechanism, role)] with one primary per mechanism."""
+    by_mechanism: dict[str, list[SignalCandidate]] = {}
+    for cand in candidates:
+        by_mechanism.setdefault(mechanism_for(cand.signal_type), []).append(cand)
+
+    out: list[tuple[SignalCandidate, str, str]] = []
+    for mechanism, group in by_mechanism.items():
+        ordered = sorted(
+            group, key=lambda c: _PRIMARY_PRIORITY.get(c.signal_type, 99)
+        )
+        for index, cand in enumerate(ordered):
+            out.append((cand, mechanism, "primary" if index == 0 else "secondary"))
+    return out
+
+
+# Rule grading from the forward-return backtest (see README "信号分级").
+# A `watch_only` rule still fires and is still stored — it marks something worth
+# a look — but it no longer counts as positive confirmation downstream, because
+# the measured evidence says following it has hurt rather than helped.
+# BREAKOUT_252D: 119 samples at +120d, 30.3% win rate, -29.78% average excess
+# vs OZR.AX. Slightly positive at +5d (+1.04%), negative from +20d onward:
+# a new 252-day high marks attention, not an entry.
+SIGNAL_GRADE = {
+    "BREAKOUT_252D": "watch_only",
+}
+DEFAULT_SIGNAL_GRADE = "confirming"
+
+SIGNAL_EVIDENCE_NOTE = {
+    "BREAKOUT_252D": (
+        "Backtest (n=119, +120d): 30.3% win rate, -29.78% average excess vs "
+        "OZR.AX. Positive only at +5d. Treat as attention, not entry."
+    ),
+}
+
+
+def signal_grade(signal_type: str) -> str:
+    return SIGNAL_GRADE.get(signal_type, DEFAULT_SIGNAL_GRADE)
+
+
+def is_confirming(signal_type: str) -> bool:
+    """Whether this rule may count as positive confirmation downstream."""
+    return signal_grade(signal_type) == DEFAULT_SIGNAL_GRADE

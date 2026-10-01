@@ -12,7 +12,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ..models import AnalyticalSignal, FusionRecord, ScoreSnapshot, Signal, Stock
+from ..models import AnalyticalSignal, Announcement, FusionRecord, ScoreSnapshot, Signal, Stock
+from ..analysis.signals import is_confirming, signal_grade
 from .attention_state import update_attention_state_from_fusion
 from .trade_decision import write_trade_decision_from_state
 
@@ -44,7 +45,7 @@ def write_p5_p6_compat_records(
                 confidence=_confidence_for_source(resource.get("source")),
                 persistence="medium",
                 source_event_id=_source_event_from_resource(resource, snapshot.date),
-                dependency_group=_source_event_from_resource(resource, snapshot.date),
+                dependency_group=_dependency_group_from_resource(session, resource, snapshot.date),
                 evidence_ids=[],
                 feature_ids=[],
                 key_drivers=_resource_drivers(resource),
@@ -56,6 +57,7 @@ def write_p5_p6_compat_records(
     announcement = components.get("announcement") if isinstance(components.get("announcement"), dict) else {}
     if snapshot.announcement_score > 0:
         source_event_id = _source_event_from_announcement(announcement, snapshot.date)
+        announcement_group = _dependency_group_from_announcement(session, announcement, snapshot.date)
         analytical_ids.append(
             _upsert_analytical_signal(
                 session,
@@ -67,7 +69,7 @@ def write_p5_p6_compat_records(
                 confidence=0.7,
                 persistence="short",
                 source_event_id=source_event_id,
-                dependency_group=source_event_id,
+                dependency_group=announcement_group,
                 evidence_ids=_announcement_evidence_ids(announcement),
                 feature_ids=[],
                 key_drivers=_announcement_drivers(announcement),
@@ -85,7 +87,7 @@ def write_p5_p6_compat_records(
                 stock_id=stock.id,
                 signal_date=snapshot.date,
                 engine="technical",
-                direction="positive",
+                direction="positive" if is_confirming(signal.signal_type) else "neutral",
                 magnitude=_technical_magnitude(signal),
                 confidence=0.75,
                 persistence="short",
@@ -96,6 +98,7 @@ def write_p5_p6_compat_records(
                 key_drivers=[signal.reason],
                 key_risks=[],
                 metadata={
+                    "grade": signal_grade(signal.signal_type),
                     "signal_id": signal.id,
                     "signal_type": signal.signal_type,
                     "evidence": _loads(signal.evidence, {}),
@@ -265,6 +268,81 @@ def _confidence_for_source(source: Any) -> float:
     return 0.5
 
 
+# Beta02 8.2: one event is one piece of evidence, however many documents it
+# produces. Companies routinely file several documents for a single event
+# (annual report + Appendix 4G + MD&A; an acquisition + its investor
+# presentation), so keying the dependency group on the document id reads one
+# event as several independent confirmations. Key on (day, event family)
+# instead, while source_event_id keeps the document id for traceability.
+ANN_TYPE_TO_EVENT_FAMILY = {
+    "DRILL_RESULTS": "exploration",
+    "DRILLING_UPDATE": "exploration",
+    "JORC_MRE": "resource",
+    "STUDY": "development",
+    "OFFTAKE": "commercial",
+    "JV_FARMIN": "commercial",
+    "PLACEMENT": "funding",
+    "SUBSTANTIAL_HOLDER": "ownership",
+    "TRADING_HALT": "administrative",
+    "QUARTERLY": "financial",
+    "OTHER": "other",
+}
+
+
+def _event_family(ann_type: Any) -> str:
+    if not isinstance(ann_type, str):
+        return "other"
+    return ANN_TYPE_TO_EVENT_FAMILY.get(ann_type.upper(), "other")
+
+
+def _event_dependency_group(ann_type: Any, signal_date: date) -> str:
+    return f"announcement_event:{signal_date.isoformat()}:{_event_family(ann_type)}"
+
+
+def _first_dict(container: dict[str, Any], key: str) -> dict[str, Any] | None:
+    items = container.get(key)
+    if isinstance(items, list) and items and isinstance(items[0], dict):
+        return items[0]
+    return None
+
+
+def _ann_type_for(session: Session, ann_id: Any, declared: Any) -> Any:
+    """Prefer the type carried in the component; fall back to the stored
+    announcement so snapshots written before the field existed still group with
+    the catalyst signal from the same event instead of splitting off."""
+    if isinstance(declared, str) and declared:
+        return declared
+    if not ann_id:
+        return None
+    return (
+        session.query(Announcement.ann_type)
+        .filter(Announcement.ann_id == ann_id)
+        .limit(1)
+        .scalar()
+    )
+
+
+def _dependency_group_from_resource(
+    session: Session, resource: dict[str, Any], signal_date: date
+) -> str:
+    first = _first_dict(resource, "items")
+    if first is not None and first.get("ann_id"):
+        ann_type = _ann_type_for(session, first.get("ann_id"), first.get("type"))
+        return _event_dependency_group(ann_type, signal_date)
+    source = resource.get("source") or "resource_component"
+    return f"{source}:{signal_date.isoformat()}"
+
+
+def _dependency_group_from_announcement(
+    session: Session, announcement: dict[str, Any], signal_date: date
+) -> str:
+    first = _first_dict(announcement, "announcements")
+    if first is not None and first.get("ann_id"):
+        ann_type = _ann_type_for(session, first.get("ann_id"), first.get("type"))
+        return _event_dependency_group(ann_type, signal_date)
+    return f"announcement_cluster:{signal_date.isoformat()}"
+
+
 def _source_event_from_resource(resource: dict[str, Any], signal_date: date) -> str:
     items = resource.get("items")
     if isinstance(items, list) and items and isinstance(items[0], dict):
@@ -321,8 +399,11 @@ def _announcement_drivers(announcement: dict[str, Any]) -> list[str]:
 
 
 def _technical_magnitude(signal: Signal) -> float:
+    # A longer window is not a stronger signal. BREAKOUT_252D measured worse
+    # than every other rule past +5d, so it carries the lowest weight despite
+    # spanning the longest window.
     if signal.signal_type == "BREAKOUT_252D":
-        return 85.0
+        return 30.0
     if signal.signal_type == "BREAKOUT_60D":
         return 70.0
     evidence = _loads(signal.evidence, {})
@@ -403,11 +484,17 @@ def _evidence_independence(session: Session, analytical_ids: list[int]) -> str:
 
 
 def _engines(session: Session, analytical_ids: list[int]) -> set[str]:
+    """Engines carrying directional evidence. Neutral signals are recorded but
+    do not make their engine count toward confirmation — a rule the backtest
+    says is not predictive must not manufacture a second opinion."""
     if not analytical_ids:
         return set()
     return {
         row.engine
-        for row in session.query(AnalyticalSignal.engine).filter(AnalyticalSignal.id.in_(analytical_ids)).all()
+        for row in session.query(AnalyticalSignal.engine, AnalyticalSignal.direction)
+        .filter(AnalyticalSignal.id.in_(analytical_ids))
+        .all()
+        if row.direction != "neutral"
     }
 
 

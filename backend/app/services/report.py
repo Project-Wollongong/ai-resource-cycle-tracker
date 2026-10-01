@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from ..analysis.signals import is_confirming
 from ..models import Announcement, DailyReport, ScoreSnapshot, Signal, Stock
 from ..notify.email_stub import EmailNotifier
 from ..notify.telegram import TelegramNotifier
@@ -478,8 +479,13 @@ def _best_announcement(components: dict) -> str | None:
 
 
 def _has_market_confirmation(snap: ScoreSnapshot, signals: list[Signal]) -> bool:
+    """Only confirming-grade rules may stand in for market confirmation; a
+    watch_only rule flags attention and must not imply the market agreed."""
     market_signals = {"REL_VOL_SPIKE", "BREAKOUT_60D", "BREAKOUT_252D"}
-    return snap.funding_score >= 60 or any(sig.signal_type in market_signals for sig in signals)
+    return snap.funding_score >= 60 or any(
+        sig.signal_type in market_signals and is_confirming(sig.signal_type)
+        for sig in signals
+    )
 
 
 def _market_confirmation_reasons(
@@ -490,6 +496,7 @@ def _market_confirmation_reasons(
         sig.reason
         for sig in signals
         if sig.signal_type in {"REL_VOL_SPIKE", "BREAKOUT_60D", "BREAKOUT_252D"}
+        and is_confirming(sig.signal_type)
     ]
     if market_signals:
         reasons.extend(market_signals[:2])

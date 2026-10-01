@@ -282,6 +282,7 @@ def _resource_score_from_contexts(session: Session, stock: Stock, eval_date) -> 
             items.append(
                 {
                     "ann_id": announcement.ann_id,
+                    "type": announcement.ann_type,
                     "date": announcement.ann_date.date().isoformat(),
                     "headline": announcement.headline[:100],
                     "score": item_score,

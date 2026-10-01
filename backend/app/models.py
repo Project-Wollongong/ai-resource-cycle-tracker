@@ -987,6 +987,11 @@ class Signal(Base):
     evidence: Mapped[str] = mapped_column(Text, default="{}")  # JSON
     price_at_signal: Mapped[float] = mapped_column(Float)  # signal-day close, reference only
     cycle_score_at_signal: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Signals sharing an event_key come from one causal mechanism on one day
+    # (a breakout already requires 1.5x volume, so it and the volume spike are
+    # one price-action event seen twice). role marks which one represents it.
+    event_key: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    role: Mapped[str] = mapped_column(String(10), default="primary")  # primary / secondary
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     stock: Mapped[Stock] = relationship(back_populates="signals")

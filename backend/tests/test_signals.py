@@ -3,6 +3,8 @@ from datetime import date
 from app.analysis.indicators import compute_indicators
 from app.analysis.signals import (
     AnnouncementEvent,
+    SignalCandidate,
+    assign_event_roles,
     detect_announcement_signal,
     detect_price_signals,
     detect_score_cross,
@@ -163,3 +165,64 @@ def test_persist_replay_signals_carry_no_label_or_score(db_session):
     assert signal.source == "replay"
     assert signal.label is None
     assert signal.cycle_score_at_signal is None
+
+
+def test_assign_event_roles_marks_one_primary_per_mechanism():
+    """A breakout already requires 1.5x volume, so a breakout plus a volume
+    spike on one day is one price-action event, not two confirmations."""
+    breakout = SignalCandidate("BREAKOUT_60D", reason="", evidence={})
+    volume = SignalCandidate("REL_VOL_SPIKE", reason="", evidence={})
+    announcement = SignalCandidate("KEY_ANNOUNCEMENT", reason="", evidence={})
+
+    roles = {
+        cand.signal_type: (mechanism, role)
+        for cand, mechanism, role in assign_event_roles([volume, breakout, announcement])
+    }
+
+    assert roles["BREAKOUT_60D"] == ("price_action", "primary")
+    assert roles["REL_VOL_SPIKE"] == ("price_action", "secondary")
+    # a different causal mechanism is its own event and stays primary
+    assert roles["KEY_ANNOUNCEMENT"] == ("announcement", "primary")
+
+
+def test_assign_event_roles_prefers_the_longer_breakout_window():
+    roles = {
+        cand.signal_type: role
+        for cand, _, role in assign_event_roles([
+            SignalCandidate("REL_VOL_SPIKE", reason="", evidence={}),
+            SignalCandidate("BREAKOUT_252D", reason="", evidence={}),
+        ])
+    }
+    assert roles["BREAKOUT_252D"] == "primary"
+    assert roles["REL_VOL_SPIKE"] == "secondary"
+
+
+def test_breakout_252d_is_graded_watch_only():
+    """The backtest measured it negative past +5d, so it must not count as
+    confirmation. It still fires — it is an attention flag, not an entry."""
+    from app.analysis.signals import SIGNAL_EVIDENCE_NOTE, is_confirming, signal_grade
+
+    assert signal_grade("BREAKOUT_252D") == "watch_only"
+    assert is_confirming("BREAKOUT_252D") is False
+    assert "BREAKOUT_252D" in SIGNAL_EVIDENCE_NOTE
+
+    # everything else keeps its default grade
+    for signal_type in ("BREAKOUT_60D", "REL_VOL_SPIKE", "KEY_ANNOUNCEMENT"):
+        assert is_confirming(signal_type) is True, signal_type
+
+
+def test_watch_only_signal_is_still_detected_and_persisted(db_session):
+    """Downgrading must not delete evidence: the rule keeps firing."""
+    stock = Stock(code="WO1", name="Watch Only", commodity="gold")
+    db_session.add(stock)
+    db_session.commit()
+
+    candidates = [SignalCandidate("BREAKOUT_252D", reason="new 252d high", evidence={})]
+    added = persist_signals(
+        db_session, stock, date(2026, 3, 2), candidates, price_at_signal=1.0
+    )
+
+    assert added == 1
+    row = db_session.query(Signal).filter_by(stock_id=stock.id).one()
+    assert row.signal_type == "BREAKOUT_252D"
+    assert row.role == "primary"

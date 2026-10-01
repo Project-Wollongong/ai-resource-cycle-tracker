@@ -5,7 +5,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from ..analysis.signals import SignalCandidate
+from ..analysis.signals import SignalCandidate, assign_event_roles
 from ..models import Signal, SignalReturn, Stock
 
 RETURN_HORIZONS = (5, 20, 60, 120)
@@ -26,7 +26,7 @@ def persist_signals(
     historical announcement data is unavailable, so a historical Cycle Score
     cannot be honestly reconstructed."""
     added = 0
-    for cand in candidates:
+    for cand, mechanism, role in assign_event_roles(candidates):
         exists = (
             session.query(Signal.id)
             .filter_by(stock_id=stock.id, date=signal_date, signal_type=cand.signal_type)
@@ -44,6 +44,8 @@ def persist_signals(
             evidence=json.dumps(cand.evidence),
             price_at_signal=price_at_signal,
             cycle_score_at_signal=cycle_score if source == "live" else None,
+            event_key=f"{stock.id}|{signal_date.isoformat()}|{mechanism}",
+            role=role,
         )
         session.add(signal)
         session.flush()

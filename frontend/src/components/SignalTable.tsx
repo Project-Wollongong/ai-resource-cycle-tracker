@@ -14,6 +14,15 @@ const TYPE_COLORS: Record<string, string> = {
   SCORE_CROSS_UP: "orange",
 };
 
+// Rules the forward-return backtest found non-predictive. They still fire and
+// are still shown — hiding them would lose information — but the table says so
+// on the row, so a reader never mistakes one for a buy confirmation.
+const WATCH_ONLY_NOTES: Record<string, string> = {
+  BREAKOUT_252D:
+    "回测 n=119（+120 天）：胜率 30.3%，相对 OZR.AX 平均超额 -29.78%。" +
+    "仅 +5 天为正。按历史表现，这是「值得看一眼」的关注提示，不是买入确认。",
+};
+
 function ReturnCell({ ret }: { ret: SignalReturn | undefined }) {
   if (!ret || ret.status === "pending") return <span style={{ color: "#999" }}>-</span>;
   if (ret.status === "unavailable")
@@ -66,8 +75,19 @@ export default function SignalTable({
     {
       title: "信号",
       dataIndex: "signal_type",
-      width: 160,
-      render: (t: string) => <Tag color={TYPE_COLORS[t] ?? "default"}>{t}</Tag>,
+      width: 220,
+      render: (t: string) => (
+        <>
+          <Tag color={TYPE_COLORS[t] ?? "default"}>{t}</Tag>
+          {WATCH_ONLY_NOTES[t] && (
+            <Tooltip title={WATCH_ONLY_NOTES[t]}>
+              <Tag color="warning" style={{ cursor: "help" }}>
+                仅关注
+              </Tag>
+            </Tooltip>
+          )}
+        </>
+      ),
     },
     {
       title: "来源",
