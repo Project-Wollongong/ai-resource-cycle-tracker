@@ -10,6 +10,7 @@ from datetime import date
 from typing import Iterable
 
 from .p3_value_normalizer import currency, explicit_date, number, period_range, source_excerpt, unit
+from .p3_resource_table import parse_resource_rows
 
 EXTRACTOR_NAME = "deterministic_p3_fact_extractor"
 EXTRACTOR_VERSION = "p3_fact_v3_entity_consistency"
@@ -170,6 +171,21 @@ def _f08(pages: list[str], sections: list[dict]) -> list[dict]:
         cash = re.search(r"Cash and cash equivalents at end of\s+(?:period|quarter)[^\d]*([\d,]+)\s+([\d,]+)", text, re.I | re.S)
         if cash:
             out.append(_candidate("F08", "cash_balance", "Cash Balance", cash.group(1), page, text, cash.start(), cash.end(), sections, value_numeric=number(cash.group(1)), unit_raw="$A’000", currency_raw="$A", quantity_type="amount", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Period-end Cash Position", metadata={"period_basis": "period_end"}))
+        # Appendix 5B section 8 is the funding-runway block the ASX mandates for
+        # exploration entities. Items 8.3 and 8.6 are the two inputs P04 needs to
+        # recompute runway; 8.7 is the entity's own stated figure, kept so the
+        # derived value can be cross-checked against what the company published.
+        outgoings = re.search(r"8\.3\s+Total relevant outgoings[^\n]*?\(([\d,]+)\)", text, re.I)
+        if outgoings:
+            out.append(_candidate("F08", "total_relevant_outgoings", "Total Relevant Outgoings", f"({outgoings.group(1)})", page, text, outgoings.start(), outgoings.end(), sections, value_numeric=-number(outgoings.group(1)), unit_raw="$A\u2019000", currency_raw="$A", quantity_type="amount", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Periodic Cash Flow Update", metadata={"appendix_5b_item": "8.3", "period_basis": "current_quarter"}))
+        funding = re.search(r"8\.6\s+Total available funding[^\n]*?([\d,]+)\s*\n", text, re.I)
+        if funding:
+            out.append(_candidate("F08", "total_available_funding", "Total Available Funding", funding.group(1), page, text, funding.start(), funding.end(), sections, value_numeric=number(funding.group(1)), unit_raw="$A\u2019000", currency_raw="$A", quantity_type="amount", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Period-end Cash Position", metadata={"appendix_5b_item": "8.6", "period_basis": "period_end"}))
+        # the value sits after the "(Item 8.6 divided by Item 8.3)" note, which
+        # itself contains digits — skip the parenthetical before reading it
+        quarters = re.search(r"8\.7\s+Estimated quarters of funding available\s*\(\s*Item[\s\S]{0,40}?\)\s*([\d]+(?:\.[\d]+)?|N/?A)", text, re.I)
+        if quarters and quarters.group(1).upper().replace("/", "") != "NA":
+            out.append(_candidate("F08", "estimated_quarters_funding", "Estimated Quarters of Funding", quarters.group(1), page, text, quarters.start(), quarters.end(), sections, value_numeric=number(quarters.group(1)), unit_raw="quarters", quantity_type="ratio", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Period-end Cash Position", metadata={"appendix_5b_item": "8.7", "entity_reported": True}))
         for match in _find(r"\$(\d+(?:\.\d+)?)M cash as at\s+(\d{1,2}\s+[A-Za-z]+\s+20\d{2})", text):
             as_of = explicit_date(match.group(2))
             out.append(_candidate("F08", "cash_balance", "Cash Balance", f"${match.group(1)}M", page, text, match.start(), match.end(), sections, value_numeric=number(match.group(1)), unit_raw="$M", currency_raw="$", quantity_type="amount", status="reported", as_of_date=as_of, event_type_hint="Period-end Cash Position"))
@@ -223,15 +239,35 @@ def _f02(pages: list[str], sections: list[dict]) -> list[dict]:
             out.append(_candidate("F02", "grade", "Grade", match.group(3), page, text, match.start(), match.end(), sections, value_numeric=number(match.group(3)), unit_raw="g/t Au", quantity_type="commodity_quantity", status="historical_reference", event_type_hint="Ore Reserve Update", metadata=meta))
         for match in _find(r"Inferred Resources[^.]*are\s+(\d+(?:\.\d+)?)koz", text):
             out.append(_candidate("F02", "contained_metal", "Contained Metal", match.group(1), page, text, match.start(), match.end(), sections, value_numeric=number(match.group(1)), unit_raw="koz Au", quantity_type="commodity_quantity", status="reported", event_type_hint="Ore Reserve Update", metadata={"resource_or_reserve_type": "Mineral Resource", "classification": "Inferred", "commodity": "gold"}))
-        table = re.search(r"Probable\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)", text, re.I)
-        if table:
-            meta = {"resource_or_reserve_type": "Ore Reserve", "classification": "Probable", "commodity": "gold"}
-            out.append(_candidate("F02", "resource_or_reserve_type", "Resource / Reserve Type", "Ore Reserve", page, text, table.start(), table.end(), sections, value_text="Ore Reserve", status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
-            out.append(_candidate("F02", "commodity", "Commodity", "Au", page, text, table.start(), table.end(), sections, value_text="gold", status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
-            out.append(_candidate("F02", "tonnage", "Tonnage", table.group(1), page, text, table.start(), table.end(), sections, value_numeric=number(table.group(1)), unit_raw="Mt", quantity_type="commodity_quantity", status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
-            out.append(_candidate("F02", "grade", "Grade", table.group(2), page, text, table.start(), table.end(), sections, value_numeric=number(table.group(2)), unit_raw="g/t Au", quantity_type="commodity_quantity", status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
-            out.append(_candidate("F02", "contained_metal", "Contained Metal", table.group(3), page, text, table.start(), table.end(), sections, value_numeric=number(table.group(3)), unit_raw="koz Au", quantity_type="commodity_quantity", status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
-            out.append(_candidate("F02", "classification", "Classification", "Probable", page, text, table.start(), table.end(), sections, value_text="Probable", status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
+        # Columns are matched to the table header rather than taken by position:
+        # reading the first three numbers after the classification turns a
+        # tantalum ppm figure into gold ounces on a polymetallic table, and the
+        # result is plausible enough to pass unnoticed.
+        for row in parse_resource_rows(text):
+            if row.tonnage_mt is None or row.grade is None or row.classification == "Total":
+                continue
+            grade_value, grade_unit, commodity = row.grade
+            meta = {
+                "resource_or_reserve_type": "Ore Reserve",
+                "classification": row.classification,
+                "commodity": commodity,
+                "column_aligned": True,
+                # the row's offset on the page uniquely identifies it: one
+                # document can carry several tables whose rows share a
+                # classification, and pairing a tonnage to the wrong row's grade
+                # fabricates exactly the error the P04 check looks for
+                "table_row_ref": f"p{page}:{row.start}",
+                "table_columns": [f"{column.label or '?'} ({column.unit})" for column in row.columns],
+            }
+            out.append(_candidate("F02", "resource_or_reserve_type", "Resource / Reserve Type", "Ore Reserve", page, text, row.start, row.end, sections, value_text="Ore Reserve", status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
+            if commodity:
+                out.append(_candidate("F02", "commodity", "Commodity", commodity, page, text, row.start, row.end, sections, value_text=commodity, status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
+            out.append(_candidate("F02", "tonnage", "Tonnage", str(row.tonnage_mt), page, text, row.start, row.end, sections, value_numeric=row.tonnage_mt, unit_raw="Mt", quantity_type="commodity_quantity", status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
+            out.append(_candidate("F02", "grade", "Grade", str(grade_value), page, text, row.start, row.end, sections, value_numeric=grade_value, unit_raw=grade_unit, quantity_type="commodity_quantity", status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
+            if row.contained is not None:
+                contained_value, contained_unit, _ = row.contained
+                out.append(_candidate("F02", "contained_metal", "Contained Metal", str(contained_value), page, text, row.start, row.end, sections, value_numeric=contained_value, unit_raw=contained_unit, quantity_type="commodity_quantity", status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
+            out.append(_candidate("F02", "classification", "Classification", row.classification, page, text, row.start, row.end, sections, value_text=row.classification, status="reported", event_type_hint="Ore Reserve Update", metadata=meta))
     return out
 
 
