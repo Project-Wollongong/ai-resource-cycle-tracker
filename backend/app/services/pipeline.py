@@ -23,6 +23,7 @@ from .backtest import fill_pending_returns
 from .config_service import ensure_defaults, get_all_config, get_config
 from .market_data import sync_all_instruments, sync_stock_prices
 from .report import build_daily_report, push_daily_report
+from .p4_feature_service import compute_all_features
 from .scoring_service import score_and_signal_stock
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,8 @@ def _run_daily_pipeline_unlocked(trigger: str, retry_of_run_id: int | None = Non
             "p3_review_needed": 0,
             "p3_failed": 0,
             "p3_skipped": 0,
+            "p4_features_computed": 0,
+            "p4_features_skipped": 0,
             "blocked_sources": [],
             "scored": 0,
             "signals_added": 0,
@@ -147,6 +150,17 @@ def _run_daily_pipeline_unlocked(trigger: str, retry_of_run_id: int | None = Non
                 item.finished_at = datetime.utcnow()
                 session.flush()
                 time.sleep(random.uniform(settings.request_delay_min, settings.request_delay_max))
+
+            # 3b) P04 derived features — runs after P03 facts land, before
+            # scoring, so anything consuming features sees the current quarter
+            try:
+                p4 = compute_all_features(session, [stock.id for stock in stocks])
+                stats["p4_features_computed"] = p4["computed"]
+                stats["p4_features_skipped"] = p4["skipped"]
+            except Exception as exc:
+                logger.exception("P04 feature computation failed")
+                stats["errors"].append(f"p4:{exc}")
+                session.rollback()
 
             # 4+5) scores, snapshots, signals
             for stock in stocks:

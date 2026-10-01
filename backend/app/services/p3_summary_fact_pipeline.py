@@ -38,7 +38,15 @@ _EVENT_REQUIREMENTS: tuple[tuple[str, str, tuple[tuple[str, tuple[str, ...]], ..
         ("exploration_spend", ("exploration_spend",)),
         ("development_spend", ("development_spend",)),
         ("administration_spend", ("administration_spend",)),
+        # Appendix 5B section 8 — the two inputs P04 needs to derive funding
+        # runway, plus the entity's own stated figure to check the result against
+        ("total_relevant_outgoings", ("total_relevant_outgoings",)),
+        ("total_available_funding", ("total_available_funding",)),
+        ("estimated_quarters_funding", ("estimated_quarters_funding",)),
     )),
+    # section 8 lives only in Appendix 5B, so it hangs off the cash-flow event
+    # above rather than the generic cash-position one — otherwise any document
+    # merely mentioning a cash position reports section 8 as missing
     ("F08", r"Cash Position", (("cash_balance", ("cash_balance",)),)),
     ("F06", r"Placement", (
         ("funding_method", ("funding_method",)),

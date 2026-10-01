@@ -135,11 +135,11 @@ Funding Score 仍会计算并展示，但它现在定位为独立的资金确认
 |---|---|
 | `REL_VOL_SPIKE` | 相对成交量达到阈值，且上涨日，且成交额达到最低流动性门槛 |
 | `BREAKOUT_60D` | 收盘价创 60 日新高，且相对成交量和成交额达标 |
-| `BREAKOUT_252D` | 收盘价创 252 日新高，且相对成交量和成交额达标；同日优先于 60 日突破 |
+| `BREAKOUT_252D` | 收盘价创 252 日新高，且相对成交量和成交额达标；同日优先于 60 日突破。**已降级为 `watch_only`**，详见「信号分级」 |
 | `KEY_ANNOUNCEMENT` | 新公告分数达到阈值，或 price-sensitive 公告达到较低阈值；融资和停牌被排除 |
 | `SCORE_CROSS_UP` | Cycle Score 上穿 High Priority 线 |
 
-信号会永久入库，并自动创建 +5、+20、+60、+120 交易日的前向收益记录。
+信号会永久入库，并自动创建 +5、+20、+60、+120 交易日的前向收益记录。同一股票同一天同一因果机制的信号共享 `event_key`，并由 `role` 区分 primary / secondary，详见「信号与评分的去重」。
 
 ## 回测口径
 
@@ -148,7 +148,126 @@ Funding Score 仍会计算并展示，但它现在定位为独立的资金确认
 - 交易日按个股自身 K 线日历计算，停牌和假日自然跳过。
 - 股票长期无 K 线时，对应信号标记为 `unavailable`，不进入收益统计，但展示数量，用于暴露幸存者偏差。
 - `replay` 信号由历史行情重放价格类规则产生，不含公告信号、标签和 Cycle Score。
+- 同一股票同一天的多个信号入场价相同、收益相同，统计时按股票-日去重；`total_signals` 为信号条数，`total_signal_days` 为背后的独立交易日数，详见「信号与评分的去重」。
 - 样本量小于 10 时标记为低样本。
+
+## 信号分级
+
+信号规则不是生而平等的。前向收益回测显示，部分规则在统计上没有预测价值，甚至是负贡献。这类规则**不删除、照常产出并入库**（删掉就等于丢失证据，也无法继续观察它在新市场环境下的表现），但会被降级，不再参与下游的「确认」判断。
+
+| 等级 | 含义 | 下游行为 |
+|---|---|---|
+| `confirming` | 默认等级，可作为正面证据 | 计入共振判定、市场确认、每日故事 |
+| `watch_only` | 回测证伪，仅作关注提示 | P5 方向标 `neutral`、不计入 engine 共振、不计入市场确认、前端标「仅关注」 |
+
+### 当前被降级的规则
+
+| 规则 | 回测依据 | 处理 |
+|---|---|---|
+| `BREAKOUT_252D` | n=119（+120 天）：胜率 30.3%，相对 `OZR.AX` 平均超额 **−29.78%**。按周期看 +5d 为 +1.04%，+20d 起转负并持续恶化 | 降为 `watch_only`；technical magnitude 从 85 降至 30 |
+
+读法：创 252 日新高并放量，在样本期内更像一波行情的尾声而非起点。短线（5 日内）仍微正，说明它确实反映了市场关注度，问题出在把它当作买入并持有的依据。因此保留为「值得看一眼」的提示。
+
+### 实现
+
+分级定义在 `analysis/signals.py` 的 `SIGNAL_GRADE`，回测依据记录在 `SIGNAL_EVIDENCE_NOTE`，统一通过 `is_confirming(signal_type)` 查询。新增降级规则只需改这一处，下游自动生效：
+
+- `p5_p6_adapter.py` — 非 confirming 规则的 P5 分析信号方向写为 `neutral`；`_engines()` 只统计非 neutral 的 engine，因此被降级的规则无法让 `signal_structure` 变成 `confirmation`
+- `report.py` — `_has_market_confirmation()` 与 `_market_confirmation_reasons()` 跳过被降级的规则
+- `SignalTable.tsx` — 信号列附加「仅关注」标签，悬停显示回测依据
+
+### 注意
+
+分级依据是**单一 400 天窗口、29 支股票、一轮上涨周期**，且股票池为事后选取（幸存者可见）。这说明的是「在目前能观察到的历史里该规则为负贡献」，不等于它在其他市场环境中同样无效。样本扩充或跨周期验证后应重新评估分级。
+
+## 信号与评分的去重
+
+多个维度同时变好，不等于多份独立证据。同一个事件往往会在好几个地方留下痕迹，如果每处都单独计分，系统会把一次事件读成一场共振，从而高估把握。下面记录已识别的重复计分点、各自的处理方式，以及目前仍未处理的部分。
+
+### 已识别的重复计分点
+
+| # | 位置 | 怎么重复的 | 状态 |
+|---|---|---|---|
+| 1 | 信号生成（`analysis/signals.py`） | 突破本身就要求放量（`breakout_rel_vol` 默认 1.5），所以创新高当天若放量达标，`BREAKOUT_*` 和 `REL_VOL_SPIKE` 会同时触发。两者机械耦合，不是两次独立观察 | 已处理 |
+| 2 | 回测统计（`services/backtest.py`） | 同一股票同一天的多个信号，入场价相同、前向收益完全相同。按信号条数统计会虚增样本量；按标签或分数段分组时，它们还会落进同一组被当成多个独立样本 | 已处理 |
+| 3 | P5/P6 证据独立性（`services/p5_p6_adapter.py`） | `dependency_group` 原先以单份公告 ID 为键。公司常为同一件事一次发好几份文件（年报 + Appendix 4G + MD&A；收购公告 + 投资者演示），会被判成多个独立来源 | 已处理 |
+| 4 | Cycle Score 子分（`services/scoring_service.py`） | `announcement_score`（权重 0.40）与 `resource_score`（权重 0.20）读取同一批 `Announcement` 行。一份钻探公告可同时抬高两者，相当于让单一事件推动 Cycle Score 的 60% | **未处理** |
+
+### 处理方式
+
+**信号层：事件归组 + 主次标记。** `signals` 表的 `event_key` 把同一股票、同一天、同一因果机制的信号归为一个事件，`role` 标记哪一条代表它：
+
+```
+event_key = "{stock_id}|{date}|{mechanism}"     mechanism: price_action / announcement
+role      = primary | secondary
+```
+
+同一 mechanism 内按 `BREAKOUT_252D` > `BREAKOUT_60D` > `REL_VOL_SPIKE` 取 primary。两条信号都保留入库，不删除任何一条——消费方可以自行决定只数 primary 还是全数。价格行为与公告属于不同因果机制，各自独立成事件。
+
+**回测层：按股票-日去重。** 聚合时以「分组 + 周期 + 股票 + 日期」为键去重。由于同日信号的前向收益本就完全相同，这是在删除重复行，不是在做取舍。接口同时返回两个口径：
+
+- `total_signals`：信号条数
+- `total_signal_days`：背后的独立股票-日数量
+
+两者差距即重叠程度。以当前数据集为例，608 条信号实际只来自 495 个独立交易日。
+
+**P5/P6 层：按事件族归组。** `dependency_group` 改为 `announcement_event:{日期}:{事件族}`，公告类型映射到 administrative / commercial / development / exploration / financial / funding / other / ownership / resource（见 `ANN_TYPE_TO_EVENT_FAMILY`）。`source_event_id` 仍保留文档 ID，证据链可追溯。`_evidence_independence()` 统计的是不同 `dependency_group` 的数量，而非信号条数，因此同一事件衍生的多条信号只算一份证据。
+
+### 尚未处理
+
+**Cycle Score 子分之间的同源计分（上表 #4）。** `_resource_score_from_contexts()` 与公告子分读取同一批公告行，二者没有共享去重键。当前 `AI_ANALYZER=noop`，`resource_score` 恒为默认 50，该问题不会显现；一旦启用 `rules_fulltext` 或 `claude` 分析器，同源放大会立即生效。修复前请留意：此时的 Cycle Score 高分可能来自一个事件，而非多维共振。
+
+**事件族划分偏粗。** 同一天的两份互不相关的钻探公告会被归入同一事件族，因而被当作一份证据。这是刻意选择的保守方向——宁可低估共振，也不要制造虚假共振。待 P03 把事件类型抽取稳定后，可以改为按真实事件聚合。
+
+## P04 衍生指标
+
+P03 记录公司说了什么，P04 把这些陈述变成可比较的数字。P04 不重读文档：每个指标都标注它由哪些 P03 事实算出、用的什么公式、来自原文第几页，因此屏幕上的任何一个数都能走回它所出自的那句话。指标为追加写入并带 `formula_version`，改定义不会重写历史——换个版本重算，然后比较两者。
+
+接口：`GET /api/stocks/{code}/features`（可选 `?feature_group=funding`）。流水线在 P03 事实落库之后、评分之前自动计算。
+
+### 已实现的三组
+
+| 组 | 指标 | 公式 | 数据来源 | 当前 `formula_version` |
+|---|---|---|---|---|
+| `funding` | `cash_runway_quarters`<br>`quarterly_burn` | 8.6 项 ÷ \|8.3 项\| | Appendix 5B 第 8 节 | `funding_runway_v1` |
+| `dilution` | `placement_discount_pct` | 配售价 ÷ 公告前收盘 − 1 | 融资公告 + 日线 | `placement_discount_v1` |
+| `resource` | `contained_metal_reconciliation_pct_*` | 吨位 × 品位 vs 公告披露金属量 | JORC 资源 / 储量表 | `contained_metal_check_v1` |
+
+**现金跑道**：ASX 强制勘探公司在 Appendix 5B 第 8.7 项自行披露可用季度数。P04 不采信该数字，而是用第 8.6 与 8.3 项重算，并把差额记入 `variance_vs_entity_reported`——解析出错或公司算错都会显现，而不是被悄悄吞掉。跑道低于 2 个季度时打 `below_asx_disclosure_threshold`，那既是 ASX 要求回答第 8.8 项的门槛，也是稀释性融资几乎必然发生的水平。
+
+**配售折价**：参考价取公告**前一交易日**收盘，因为配售是按谈判时的市价定的，公告当天股价已包含该消息。门控按文档类别（`ISSUED CAPITAL` 等融资类）判断，不看事件类型——年报会复述历史期权与发行价，P03 同样归类为 `Placement` 事件，拿它们对比今天的股价会得出无意义的折价。折价 ≤ −20% 标 `deep_discount`。
+
+**资源量交叉校验**：见下节。偏差超过 10% 即判定不一致，超过 100% 额外标 `likely_column_misread`。仅处理 JORC 表明确无歧义的单位配对（g/t → koz / Moz，% → t / kt）；ppm、lb、oz/t 等不作换算而非猜测，因为错误换算会表现为源数据有误，与本校验要传达的信号相冲突。
+
+## 资源量表格的列对齐解析
+
+JORC 表格为矿体中的每种元素单独设列，一行读作 `36.8 Mt ｜ 1.00 % Li2O ｜ 62.4 ppm Ta2O5`。早期实现按位置取「分类后的前三个数字」，并把单位与元素硬编码为黄金：
+
+```python
+table = re.search(r"Probable\s+(\d+)\s+(\d+)\s+(\d+)", text)   # 旧实现
+```
+
+这对单一金矿碰巧成立，对其他矿种则给出可信外观的错误数字。实测中它把一家锂矿的钽 ppm 读成了黄金盎司，把一家铜钼矿读成了金矿，而数字本身毫无破绽。
+
+`services/p3_resource_table.py` 改为从表头读取列定义，支持三种真实排版：
+
+| 排版 | 样例 | 对应方式 |
+|---|---|---|
+| 标签行 + 单位行 | `Tonnes CuEq Cu Au`<br>`(Mt) (%) (%) (g/t)` | 按列序号配对，非相邻关系 |
+| 每单位独占一行 | `Li2O`<br>`(%)`<br>`Ta2O5`<br>`(ppm)` | 取紧邻的上一标签 |
+| 单位内嵌元素 | `Grade (g/t Au)` | 从单位文本内解析元素 |
+
+规则：
+
+- **主商品**取既有品位列又有含量列的元素；等价品位（CuEq、AuEq）被识别并排除，因其由其他金属折算而来。
+- **单一品位的表格**可继承未标注元素的含量列（如 `Ounces (Koz)`），因为表中只有一种商品。
+- **列数与数值数不符则整行丢弃**。缺一条事实可以补回，错一条则不能。
+- 每条事实记录 `table_row_ref`（页码 + 行偏移）。一份文档常含多张表、各表的行又共用同一分类名；没有行标识就无法确定哪个吨位对应哪个品位，而错误配对恰好会制造出本校验要捕捉的那类错误。
+- 可识别 13 种商品（gold、copper、lithium、uranium、rare_earth、tantalum、nickel、zinc、lead、cobalt、silver、molybdenum、iron）。
+
+### P04 只读取当前解析结果
+
+P03 为追加写入：以新解析器重解析文档时，旧事实保留在库中、其解析运行被标记 `superseded`。P04 因此只读取未被取代的运行——否则修正后的抽取会悄悄输给它所替代的那个数字。
 
 ## 定性矿业上下文
 
@@ -188,7 +307,7 @@ Funding Score 仍会计算并展示，但它现在定位为独立的资金确认
 ## 前端页面
 
 - 雷达排名：按 Cycle Score 排序，展示子分、标签和当日信号数量。
-- 个股详情：价格/成交量图、信号点、评分拆解、分数历史、公告、定性上下文、信号历史。
+- 个股详情：价格/成交量图、信号点、**资金跑道卡片（P04：现金跑道、配售折价、资源量校验）**、评分拆解、分数历史、公告、定性上下文、信号历史。
 - 信号记录：按信号类型、标签、来源、代码筛选。
 - 回测：按信号类型、标签、分数段、截距质量、materiality 查看历史表现。
 - 日报：Top Cycle Scores、当日信号、关键公告、异动股、推送状态。
@@ -201,12 +320,14 @@ backend/app/
 ├─ datasources/    # ASX 公告、yfinance 日线、商品/基准
 ├─ analysis/       # indicators / classifier / scoring / signals / ai_stub
 ├─ services/       # pipeline、回测、回放、日报、市场数据、配置
+│                  # p3_resource_table（JORC 表格列对齐）
+│                  # p4_feature_service（现金跑道 / 配售折价 / 资源量校验）
 ├─ notify/         # Telegram 和 SMTP Email
 └─ api/routes/     # stocks / signals / announcements / backtest / reports / config / admin
 
 frontend/src/
 ├─ pages/          # Ranking / StockDetail / Signals / Backtest / Reports / Settings
-├─ components/     # 图表、评分拆解、信号表、上下文面板
+├─ components/     # 图表、评分拆解、信号表、上下文面板、资金跑道面板
 └─ api/            # API client 和类型
 
 scripts/
@@ -239,6 +360,9 @@ npm run build
 6. Risk Score 第一版不会推断现金 runway、融资折价、债务或完整稀释条款；这些需要后续从 Appendix 5B、融资公告和股本结构中结构化抽取。
 7. 规则全文分析只做窄范围抽取，不能替代地质、矿权、财务和估值尽调。
 8. `claude` 分析器只有在显式允许付费调用且配置 API key 时才会运行。
+9. Cycle Score 的 `announcement` 与 `resource` 两个子分读取同一批公告，存在同源重复计分（合计权重 0.60）。当前 `AI_ANALYZER=noop` 时 `resource` 恒为 50 不会显现，启用正文分析器后会生效，详见「信号与评分的去重 / 尚未处理」。
+10. P04 指标依赖对应的公告类型：没有 Appendix 5B 就没有现金跑道，没有融资公告就没有折价。ASX 接口每支股票仅返回最近 5 份文件，因此多数股票当前无 P04 数据；历史文档需经 `POST /api/admin/evidence/historical-baseline` 手工导入。
+11. 资源量交叉校验只覆盖 JORC 表中单位配对明确的行；ppm、lb、oz/t 等不作换算，相应行不产生校验结果，不代表数据已通过检查。
 
 ## Beta02 P01–P03 证据流水线
 

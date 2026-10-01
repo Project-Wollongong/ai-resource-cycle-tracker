@@ -874,3 +874,38 @@ export interface TradeReview {
   learning_candidates: StrategyLearningCandidate[];
   created_at: string;
 }
+
+export interface P4FeatureEvidence {
+  formula?: string;
+  inputs?: Record<string, number>;
+  prior_close_date?: string;
+  announcement_date?: string;
+  announcement_headline?: string | null;
+  implied?: number;
+  implied_unit?: string;
+  classification?: string;
+  source_excerpt?: string;
+  source_pages?: Record<string, number | null>;
+  entity_reported_quarters?: number | null;
+  variance_vs_entity_reported?: number | null;
+}
+
+export interface P4Feature {
+  feature_group: string;
+  feature_name: string;
+  value: number | null;
+  unit: string | null;
+  as_of_date: string;
+  formula_version: string;
+  input_fact_ids: number[];
+  evidence: P4FeatureEvidence;
+  metadata: {
+    appendix_5b_items?: string[];
+    below_asx_disclosure_threshold?: boolean;
+    deep_discount?: boolean;
+    document_category?: string | null;
+    consistent?: boolean;
+    classification?: string;
+    likely_column_misread?: boolean;
+  };
+}

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from ...models import Announcement, PriceBar, Project, ScoreSnapshot, Signal, Stock, StockProject
+from ...models import P4Feature, Announcement, PriceBar, Project, ScoreSnapshot, Signal, Stock, StockProject
 from ...schemas import (
     AnnouncementOut,
     Message,
@@ -254,3 +254,32 @@ def stock_signals(code: str, limit: int = 100, db: Session = Depends(get_db)):
         .all()
     )
     return [signal_out(s, stock) for s in rows]
+
+
+@router.get("/{code}/features")
+def stock_features(code: str, feature_group: str | None = None, db: Session = Depends(get_db)):
+    """P04 derived features with their lineage.
+
+    Every value carries the formula that produced it, the P03 fact ids it was
+    computed from and the source page, so a number on screen can always be
+    walked back to the sentence in the PDF it came from.
+    """
+    stock = _get_stock_or_404(db, code)
+    query = db.query(P4Feature).filter_by(stock_id=stock.id)
+    if feature_group:
+        query = query.filter(P4Feature.feature_group == feature_group)
+    rows = query.order_by(P4Feature.as_of_date.desc(), P4Feature.feature_name).all()
+    return [
+        {
+            "feature_group": row.feature_group,
+            "feature_name": row.feature_name,
+            "value": json.loads(row.value_json).get("numeric"),
+            "unit": row.unit,
+            "as_of_date": row.as_of_date,
+            "formula_version": row.formula_version,
+            "input_fact_ids": json.loads(row.input_refs_json),
+            "evidence": json.loads(row.evidence_json),
+            "metadata": json.loads(row.metadata_json),
+        }
+        for row in rows
+    ]
