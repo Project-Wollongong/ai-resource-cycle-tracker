@@ -8,4 +8,5 @@ yfinance>=0.2.40
 pandas>=2.0
 httpx>=0.27
 pypdf>=5.0
+cryptography>=3.1  # required by pypdf to decrypt AES-protected ASX PDFs
 pytest>=8
