@@ -24,6 +24,7 @@ import P3FactsTable, { hasDrillContext, neutralFactSummary } from "../components
 import P3InformationPoints from "../components/P3InformationPoints";
 import P3EntityMappings from "../components/P3EntityMappings";
 import FundingRunwayPanel from "../components/FundingRunwayPanel";
+import NoData from "../components/NoData";
 import PriceVolumeChart from "../components/PriceVolumeChart";
 import QualitativeContextPanel from "../components/QualitativeContextPanel";
 import ScoreBreakdown from "../components/ScoreBreakdown";
@@ -207,7 +208,10 @@ export default function StockDetail() {
 
       <Card size="small" title={`项目与资产单元 (${projects.length})`}>
         {projects.length === 0 ? (
-          <Typography.Text type="secondary">暂无已建立的项目关系</Typography.Text>
+          <NoData
+            title="尚无已建立的项目关系"
+            reason="项目实体需经「实体审核」人工批准后才会建档。当前的名称识别只认 Target / Prospect / Zone 等子区域后缀，不认 Project / Mine / Deposit，因此多数项目名未被提取。"
+          />
         ) : (
           <Space direction="vertical" style={{ width: "100%" }}>
             {projects.map((project) => (

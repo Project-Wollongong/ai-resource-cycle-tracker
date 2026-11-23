@@ -34,7 +34,9 @@ describe("FundingRunwayPanel", () => {
     expect(container.textContent).toContain("3.08");
     expect(container.textContent).toContain("现金跑道");
     expect(screen.getByText(/第 8.3 \/ 8.6 \/ 8.7 项 · 第 17 页/)).toBeInTheDocument();
-    expect(screen.getByText("一致")).toBeInTheDocument();
+    // a passed cross-check should not compete for attention; only a mismatch
+    // gets a coloured badge
+    expect(screen.getByText("与本系统推算一致")).toBeInTheDocument();
   });
 
   it("warns when the runway is under the two-quarter disclosure threshold", () => {
@@ -62,8 +64,11 @@ describe("FundingRunwayPanel", () => {
 
   it("explains what is missing rather than rendering an empty box", () => {
     render(<FundingRunwayPanel features={[]} />);
-    expect(screen.getByText("暂无现金跑道")).toBeInTheDocument();
+
+    expect(screen.getByText("尚无法计算")).toBeInTheDocument();
     expect(screen.getByText(/需要一份 Appendix 5B/)).toBeInTheDocument();
+    // the point of the panel: an absence must not read as a cleared check
+    expect(screen.getByText(/无告警不代表状况良好/)).toBeInTheDocument();
   });
 });
 
@@ -96,7 +101,7 @@ describe("FundingRunwayPanel · 配售折价", () => {
   it("still renders the placement when no quarterly has been filed", () => {
     const { container } = render(<FundingRunwayPanel features={[discount]} />);
     expect(container.textContent).toContain("-25.93%");
-    expect(container.textContent).toContain("暂无现金跑道");
+    expect(container.textContent).toContain("尚无法计算");
   });
 });
 

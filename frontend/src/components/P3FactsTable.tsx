@@ -1,4 +1,6 @@
-import { Empty, Space, Table, Tag, Tooltip, Typography } from "antd";
+import { Space, Table, Tag, Tooltip, Typography } from "antd";
+
+import NoData from "./NoData";
 
 import type { P3Event, P3Fact } from "../api/types";
 
@@ -47,7 +49,13 @@ export function neutralFactSummary(facts: P3Fact[]) {
 }
 
 export default function P3FactsTable({ facts }: { facts: P3Fact[] }) {
-  if (facts.length === 0) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="尚未提取事实" />;
+  if (facts.length === 0)
+    return (
+      <NoData
+        title="尚未提取事实"
+        reason="该公告已归档但未产出结构化事实：可能是文档类型尚无抽取规则（F01 钻探、F05 许可、F07 商业交易目前均无规则），也可能是摘要优先策略判定无需下探正文。"
+      />
+    );
   const familyFilters = [...new Set(facts.map((fact) => fact.family))].map((value) => ({ text: value, value }));
   const fieldFilters = [...new Set(facts.map((fact) => fact.field_name))].map((value) => ({ text: value, value }));
   return (

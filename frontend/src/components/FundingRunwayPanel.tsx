@@ -1,6 +1,8 @@
-import { Alert, Descriptions, Empty, Space, Statistic, Tag, Tooltip, Typography } from "antd";
+import { Alert, Descriptions, Space, Statistic, Tooltip, Typography } from "antd";
 
 import type { P4Feature } from "../api/types";
+import NoData from "./NoData";
+import StatusPill from "./StatusPill";
 
 // Under two quarters the ASX makes the entity answer Appendix 5B item 8.8
 // ("how will you fund operations?"), which is also the level at which a
@@ -37,7 +39,11 @@ function PlacementDiscount({ feature }: { feature: P4Feature }) {
           <Typography.Text strong style={{ color: deep ? "#cf1322" : "#d46b08" }}>
             {pct.toFixed(2)}%
           </Typography.Text>
-          {deep && <Tag color="red">深度折价</Tag>}
+          {deep && (
+            <StatusPill level="caution" hint="折让 20% 或以上，融资代价偏高">
+              深度折价
+            </StatusPill>
+          )}
         </Space>
       </Descriptions.Item>
       <Descriptions.Item label="计算式">
@@ -107,33 +113,23 @@ export default function FundingRunwayPanel({ features }: { features: P4Feature[]
   const inconsistent = checks.filter((item) => item.metadata?.consistent === false).length;
 
   if (!runway || runway.value === null) {
-    // the dilution group is derived independently, so a stock can have a
-    // placement on record without a quarterly having been filed yet
+    // the dilution and resource groups are derived independently, so a stock
+    // can have a placement or a reconciliation on record with no quarterly yet
+    const missing = (
+      <NoData reason="需要一份 Appendix 5B 季度现金流报告。ASX 接口每支股票仅返回最近 5 份文件，该公司当前 5 份中不含季报。" />
+    );
     if (discount || resourceCheck) {
       return (
         <Space direction="vertical" size={12} style={{ width: "100%" }}>
-          {resourceCheck && <ResourceCheck feature={resourceCheck} total={checks.length} inconsistent={inconsistent} />}
-          {resourceCheck && <ResourceCheck feature={resourceCheck} total={checks.length} inconsistent={inconsistent} />}
-      {discount && <PlacementDiscount feature={discount} />}
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            暂无现金跑道 — 需要一份 Appendix 5B 季度现金流报告
-          </Typography.Text>
+          {resourceCheck && (
+            <ResourceCheck feature={resourceCheck} total={checks.length} inconsistent={inconsistent} />
+          )}
+          {discount && <PlacementDiscount feature={discount} />}
+          {missing}
         </Space>
       );
     }
-    return (
-      <Empty
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description={
-          <Space direction="vertical" size={2}>
-            <span>暂无现金跑道</span>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              需要一份 Appendix 5B 季度现金流报告才能计算
-            </Typography.Text>
-          </Space>
-        }
-      />
-    );
+    return missing;
   }
 
   const quarters = runway.value;
@@ -167,11 +163,14 @@ export default function FundingRunwayPanel({ features }: { features: P4Feature[]
             suffix={burn.unit || ""}
           />
         )}
-        <Space direction="vertical" size={2}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            状态
-          </Typography.Text>
-          <Tag color={tone.color}>{tone.label}</Tag>
+        <Space direction="vertical" size={4}>
+          <span className="micro">状态</span>
+          <StatusPill
+            level={quarters < CRITICAL_QUARTERS ? "critical" : quarters < CAUTION_QUARTERS ? "caution" : "watch"}
+            hint={`${quarters.toFixed(2)} 个季度 · 低于 2 个季度时 ASX 要求公司在第 8.8 项说明融资安排`}
+          >
+            {tone.label}
+          </StatusPill>
         </Space>
       </Space>
 
@@ -210,7 +209,11 @@ export default function FundingRunwayPanel({ features }: { features: P4Feature[]
           {reported != null ? (
             <Space size={6}>
               <span>{reported.toFixed(2)} 季度</span>
-              {!disagrees && <Tag color="green">一致</Tag>}
+              {!disagrees && (
+                <span className="micro" style={{ letterSpacing: "0.08em" }}>
+                  与本系统推算一致
+                </span>
+              )}
             </Space>
           ) : (
             <Typography.Text type="secondary">未披露</Typography.Text>

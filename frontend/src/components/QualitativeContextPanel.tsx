@@ -1,4 +1,6 @@
-import { Collapse, Descriptions, Empty, Space, Tag, Tooltip, Typography } from "antd";
+import { Collapse, Descriptions, Space, Tag, Tooltip, Typography } from "antd";
+
+import NoData from "./NoData";
 
 import type { QualitativeContext } from "../api/types";
 
@@ -53,7 +55,12 @@ export default function QualitativeContextPanel({
   const items = contexts?.length ? contexts : context ? [context] : [];
 
   if (!items.length) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No qualitative context available" />;
+    return (
+      <NoData
+        title="无定性上下文"
+        reason="该公告未产出可比较的钻探上下文。需要同一项目至少 3 条历史截距才能计算百分位与趋势。"
+      />
+    );
   }
 
   if (items.length > 1) {

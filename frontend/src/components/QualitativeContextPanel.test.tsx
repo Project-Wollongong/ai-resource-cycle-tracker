@@ -63,7 +63,10 @@ describe("QualitativeContextPanel", () => {
   it("renders an empty state when context is missing", () => {
     render(<QualitativeContextPanel context={null} />);
 
-    expect(screen.getByText("No qualitative context available")).toBeInTheDocument();
+    // the empty state now names the threshold it is waiting on rather than
+    // just reporting an absence
+    expect(screen.getByText("无定性上下文")).toBeInTheDocument();
+    expect(screen.getByText(/至少 3 条历史截距/)).toBeInTheDocument();
   });
 
   it("renders multiple intercept contexts in collapsible sections", () => {
