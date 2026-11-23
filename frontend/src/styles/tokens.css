@@ -1,0 +1,116 @@
+/* Azurite — design tokens.
+ *
+ * Four hues, each with exactly one job, so a colour never has to be read in
+ * context: blue means "you can interact with this", green and red mean "the
+ * price moved" (always alongside a +/- sign, since roughly one man in twelve
+ * cannot separate them by hue), and the ochre pair means "this is a state worth
+ * noticing". Confidence deliberately spends no hue at all — it is carried by
+ * how present the ink is, which leaves the budget intact and lets "we have no
+ * data" look unmistakably different from "we checked and it is fine".
+ *
+ * Light only for now; the dark palette lands as one unit with the AntD dark
+ * algorithm rather than as CSS that would disagree with the component library.
+ */
+
+:root {
+  /* neutrals — slate, biased slightly blue toward the accent */
+  --ground: #f7f9fa;
+  --surface: #ffffff;
+  --sunk: #eef2f5;
+  --line: #dce3e8;
+  --line-strong: #bcc7cf;
+
+  --ink: #141a1f;
+  --ink-soft: #4a555e;
+  --ink-faint: #7a858d;
+
+  /* interaction only — never carries meaning */
+  --azurite: #17568f;
+  --azurite-weak: #e3edf6;
+
+  /* price direction only */
+  --up: #077256;
+  --down: #c8323f;
+
+  /* risk state only */
+  --ochre: #9a6508;
+  --gossan: #8e3a1c;
+
+  /* confidence — ink presence, no hue.
+     --c-absent is for borders and fills only; it never carries text. */
+  --c-measured: #141a1f;
+  --c-indicated: #4a555e;
+  --c-inferred: #6e787f;
+  --c-absent: #c2cbd1;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas,
+    monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Digits that sit in a column have to line up, or the eye cannot compare them.
+   Applied to every table cell rather than opt-in, because in this product
+   almost every cell is a number: tickers, grades, depths, ounces, percentages. */
+.ant-table-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nav group headings read as labels, not as menu entries: the extra tracking
+   and the monospace face push them back far enough that the eye skips straight
+   to the items underneath. */
+.ant-menu-item-group-title {
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  padding-top: 14px !important;
+  padding-bottom: 4px !important;
+}
+
+/* Utilities for the places a component needs to step outside AntD's defaults. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Uppercase micro-labels need the extra tracking to stay legible. */
+.micro {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Stale figures stay readable but visibly recede, so a three-month-old cash
+   runway is never mistaken for today's price. */
+.stale {
+  opacity: 0.58;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

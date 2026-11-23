@@ -5,10 +5,14 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
 import App from "./App";
+import { applyPaletteVars, azuriteTheme } from "./theme";
+import "./styles/tokens.css";
+
+applyPaletteVars();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ConfigProvider locale={zhCN} theme={{ token: { borderRadius: 6 } }}>
+    <ConfigProvider locale={zhCN} theme={azuriteTheme}>
       <BrowserRouter>
         <App />
       </BrowserRouter>
