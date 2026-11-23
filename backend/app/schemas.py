@@ -825,6 +825,41 @@ class BacktestGroup(BaseModel):
     unavailable: int = 0
 
 
+class TodayReason(BaseModel):
+    kind: str
+    level: str
+    title: str
+    detail: str
+    # a standing state carries the date it was measured, not today's date, so
+    # a three-month-old cash position is never presented as today's news
+    as_of: date | None
+    evidence: dict = Field(default_factory=dict)
+
+
+class TodayItem(BaseModel):
+    code: str
+    name: str
+    commodity: str
+    last_close: float | None
+    last_bar_date: date | None
+    day_change_pct: float | None
+    cycle_score: float | None
+    label: str | None
+    top_level: str
+    reasons: list[TodayReason]
+
+
+class TodayBoard(BaseModel):
+    as_of: date | None
+    scored: int
+    universe: int
+    new_announcements: int
+    items: list[TodayItem]
+    # tickers with nothing to report, listed rather than hidden so the reader
+    # can see the universe was checked
+    quiet: list[str]
+
+
 class BacktestSummary(BaseModel):
     group_by: str
     source: str

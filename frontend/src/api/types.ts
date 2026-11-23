@@ -909,3 +909,35 @@ export interface P4Feature {
     likely_column_misread?: boolean;
   };
 }
+
+export interface TodayReason {
+  kind: "signal" | "announcement" | "funding" | "dilution" | "resource";
+  level: "critical" | "caution" | "watch" | "unconfirmed";
+  title: string;
+  detail: string;
+  /** When the state was measured — a standing risk is not today's news. */
+  as_of: string | null;
+  evidence: Record<string, unknown>;
+}
+
+export interface TodayItem {
+  code: string;
+  name: string;
+  commodity: string;
+  last_close: number | null;
+  last_bar_date: string | null;
+  day_change_pct: number | null;
+  cycle_score: number | null;
+  label: string | null;
+  top_level: TodayReason["level"];
+  reasons: TodayReason[];
+}
+
+export interface TodayBoard {
+  as_of: string | null;
+  scored: number;
+  universe: number;
+  new_announcements: number;
+  items: TodayItem[];
+  quiet: string[];
+}

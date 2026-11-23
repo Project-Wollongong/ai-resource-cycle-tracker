@@ -17,6 +17,7 @@ from .api.routes import (
     signals,
     stocks,
     trade_reviews,
+    today,
 )
 from .config import settings
 from .database import SessionLocal, init_db
@@ -64,5 +65,6 @@ for module in (
     admin,
     trade_reviews,
     p3,
+    today,
 ):
     app.include_router(module.router, prefix="/api")

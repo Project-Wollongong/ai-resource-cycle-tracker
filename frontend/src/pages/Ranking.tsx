@@ -5,8 +5,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { api } from "../api/client";
-import type { StockWithScore } from "../api/types";
+import type { StockWithScore, TodayBoard } from "../api/types";
 import LabelTag from "../components/LabelTag";
+import NoData from "../components/NoData";
+import TodayBoardView from "../components/TodayBoard";
 import Pct from "../components/Pct";
 
 const COMMODITY_COLORS: Record<string, string> = {
@@ -28,29 +30,62 @@ function SubScores({ s }: { s: StockWithScore }) {
     ["S", s.latest_score.sentiment_score],
   ];
   const names = [
-    "Funding confirmation (not in Cycle Score)",
+    "Funding confirmation（不计入 Cycle Score）",
     "Announcement 40%",
     "Resource 20%",
     "Commodity 20%",
     "Risk 10%",
     "Sentiment 10%",
   ];
+  // Sentiment has no data source at all — every stock carries the hardcoded
+  // 50.0 default — so it is shown as absent rather than as a middling score.
+  // The other sub-scores cannot be told apart from a genuine 50 here: the list
+  // endpoint returns components as null, so the "neutral_default" marker the
+  // scorer writes is not available. Guessing from the value alone would
+  // mislabel a real 50, which is the error this whole treatment exists to stop.
+  const ABSENT_KEYS = new Set(["S"]);
+
   return (
-    <Space size={6}>
-      {parts.map(([k, v], i) => (
-        <Tooltip key={k} title={`${names[i]}: ${v.toFixed(1)}`}>
-          <span style={{ fontSize: 12, color: v >= 60 ? "#cf1322" : v >= 30 ? "#d48806" : "#8c8c8c" }}>
-            {k}
-            {Math.round(v)}
-          </span>
-        </Tooltip>
-      ))}
+    <Space size={7}>
+      {parts.map(([k, v], i) => {
+        const absent = ABSENT_KEYS.has(String(k));
+        return (
+          <Tooltip
+            key={k}
+            title={
+              absent
+                ? `${names[i]}：无数据源，固定为默认值 ${v.toFixed(1)}`
+                : `${names[i]}：${v.toFixed(1)}`
+            }
+          >
+            <span
+              className="num"
+              style={{
+                fontSize: 12,
+                cursor: "help",
+                color: absent
+                  ? "var(--ink-faint)"
+                  : v >= 60
+                    ? "var(--ochre)"
+                    : v >= 30
+                      ? "var(--ink-soft)"
+                      : "var(--ink-faint)",
+                borderBottom: absent ? "1px dashed var(--c-absent)" : undefined,
+              }}
+            >
+              {k}
+              {Math.round(v)}
+            </span>
+          </Tooltip>
+        );
+      })}
     </Space>
   );
 }
 
 export default function Ranking() {
   const [stocks, setStocks] = useState<StockWithScore[]>([]);
+  const [board, setBoard] = useState<TodayBoard | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,7 +93,12 @@ export default function Ranking() {
     setLoading(true);
     setError(null);
     try {
-      setStocks(await api.get<StockWithScore[]>("/stocks"));
+      const [list, today] = await Promise.all([
+        api.get<StockWithScore[]>("/stocks"),
+        api.get<TodayBoard>("/today"),
+      ]);
+      setStocks(list);
+      setBoard(today);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -128,7 +168,7 @@ export default function Ranking() {
             />
           </Space>
         ) : (
-          <Typography.Text type="secondary">未评分</Typography.Text>
+          <NoData title="未评分" reason="当日没有产生评分快照，并非评分为零。" inline />
         ),
     },
     { title: "子分", key: "subs", width: 190, render: (_, s) => <SubScores s={s} /> },
@@ -164,6 +204,19 @@ export default function Ranking() {
         </Button>
       </Space>
       {error && <Alert type="error" message={error} style={{ marginBottom: 12 }} />}
+
+      {board && (
+        <div style={{ marginBottom: 28 }}>
+          <TodayBoardView board={board} />
+        </div>
+      )}
+
+      {/* The table still answers a different question — comparing the whole
+          universe side by side — so the briefing sits above it rather than
+          replacing it. */}
+      <div className="micro" style={{ marginBottom: 8 }}>
+        全部 {stocks.length} 支 · 按 Cycle Score 排序
+      </div>
       <Table
         size="small"
         rowKey="code"
