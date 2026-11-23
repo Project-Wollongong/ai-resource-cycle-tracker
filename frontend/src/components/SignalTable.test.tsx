@@ -46,7 +46,8 @@ describe("SignalTable", () => {
     const link = screen.getByRole("link", { name: "DYL" });
     expect(link).toHaveAttribute("href", "/stocks/DYL");
     expect(screen.getByText("REL_VOL_SPIKE")).toBeInTheDocument();
-    expect(screen.getByText("High Priority")).toBeInTheDocument();
+    // labels now display in Chinese while the API value drives filters
+    expect(screen.getByText("高优先")).toBeInTheDocument();
     expect(screen.getByText("relative volume spike")).toBeInTheDocument();
     expect(screen.getByText("+12.3%")).toBeInTheDocument();
   });

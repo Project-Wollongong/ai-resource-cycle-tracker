@@ -1,6 +1,9 @@
-import { Descriptions, Tag, Typography } from "antd";
+import { Descriptions, Space, Tag, Typography } from "antd";
+
+import ConfidenceTag from "./ConfidenceTag";
 
 import type { ScoreBrief } from "../api/types";
+import StatusPill from "./StatusPill";
 
 const { Text } = Typography;
 
@@ -87,6 +90,39 @@ interface RiskComponent {
 }
 
 /** Renders the persisted components JSON: the explainability contract. */
+/**
+ * A sub-score heading that says how much it counts and whether it was measured.
+ *
+ * A defaulted 50 and a measured 50 are the same number and mean opposite
+ * things: one is "we looked and it is middling", the other is "we have no
+ * source at all". The scorer records which in `source`, and the detail page is
+ * the one place that marker reaches the screen, so it is spent here.
+ */
+function SubScoreLabel({
+  name,
+  weight,
+  value,
+  defaulted,
+  note,
+}: {
+  name: string;
+  weight?: string;
+  value: number;
+  defaulted?: boolean;
+  note?: string;
+}) {
+  return (
+    <Space size={7} align="baseline" wrap>
+      <span style={{ fontWeight: 580 }}>{name}</span>
+      {weight && <span className="micro">{weight}</span>}
+      <span className="num" style={{ color: defaulted ? "var(--ink-faint)" : "var(--ink)" }}>
+        {value.toFixed(0)}
+      </span>
+      {defaulted && <ConfidenceTag level="absent" note={note} />}
+    </Space>
+  );
+}
+
 export default function ScoreBreakdown({ score }: { score: ScoreBrief }) {
   const comps = (score.components ?? {}) as Record<string, unknown>;
   const funding = (comps.funding ?? {}) as Record<string, FundingComponent>;
@@ -130,10 +166,12 @@ export default function ScoreBreakdown({ score }: { score: ScoreBrief }) {
 
   return (
     <Descriptions column={1} size="small" bordered>
-      <Descriptions.Item label={`Funding ${score.funding_score.toFixed(0)}`}>
+      <Descriptions.Item
+        label={<SubScoreLabel name="资金确认" weight="不计入 Cycle Score" value={score.funding_score} />}
+      >
         <div>
           <Tag color="purple">Funding confirmation</Tag>
-          <Text type="secondary">Tracked separately; not included in Cycle Score.</Text>
+          <Text style={{ color: "var(--ink-faint)" }}>单独跟踪，不计入 Cycle Score。</Text>
         </div>
         {fundingRow(
           "Relative volume",
@@ -156,9 +194,11 @@ export default function ScoreBreakdown({ score }: { score: ScoreBrief }) {
           funding.vol_trend?.value != null ? `MA5/MA20=${funding.vol_trend.value}` : undefined,
         )}
       </Descriptions.Item>
-      <Descriptions.Item label={`Announcement ${score.announcement_score.toFixed(0)}`}>
+      <Descriptions.Item
+        label={<SubScoreLabel name="公告" weight="权重 40%" value={score.announcement_score} />}
+      >
         {announcement.note === "no_announcements_30d" && (
-          <Text type="secondary">No announcements in 30 days.</Text>
+          <Text style={{ color: "var(--ink-faint)" }}>近 30 天无公告。</Text>
         )}
         {(announcement.announcements ?? []).slice(0, 5).map((a, i) => (
           <div key={i}>
@@ -180,26 +220,58 @@ export default function ScoreBreakdown({ score }: { score: ScoreBrief }) {
           </div>
         ) : null}
       </Descriptions.Item>
-      <Descriptions.Item label={`Resource ${score.resource_score.toFixed(0)}`}>
+      <Descriptions.Item
+        label={
+          <SubScoreLabel
+            name="资源"
+            weight="权重 20%"
+            value={score.resource_score}
+            defaulted={resource.source === "neutral_default"}
+            note="无定性上下文可用，取中性默认值"
+          />
+        }
+      >
         <ResourceBreakdown resource={resource} />
       </Descriptions.Item>
-      <Descriptions.Item label={`Commodity ${score.commodity_score.toFixed(0)}`}>
+      <Descriptions.Item
+        label={
+          <SubScoreLabel
+            name="商品"
+            weight="权重 20%"
+            value={score.commodity_score}
+            defaulted={Boolean(commodity.note)}
+            note="商品价格数据不足，取中性默认值"
+          />
+        }
+      >
         {commodity.note ? (
-          <Text type="secondary">Insufficient commodity data; neutral 50.</Text>
+          <Text style={{ color: "var(--ink-faint)" }}>商品价格数据不足，取中性默认值 50。</Text>
         ) : (
           <Text type="secondary">
             {commodity.instrument}: 20d {commodity.r20_pct}%, 60d {commodity.r60_pct}%
           </Text>
         )}
       </Descriptions.Item>
-      <Descriptions.Item label={`Risk ${score.risk_score.toFixed(0)}`}>
+      <Descriptions.Item
+        label={<SubScoreLabel name="风险" weight="权重 10% · 越高越安全" value={score.risk_score} />}
+      >
         <RiskBreakdown risk={risk} />
       </Descriptions.Item>
-      <Descriptions.Item label={`Sentiment ${score.sentiment_score.toFixed(0)}`}>
+      <Descriptions.Item
+        label={
+          <SubScoreLabel
+            name="情绪"
+            weight="权重 10%"
+            value={score.sentiment_score}
+            defaulted={sentiment.source === "neutral_default"}
+            note="尚未接入任何情绪数据源"
+          />
+        }
+      >
         <Text type="secondary">
           {sentiment.source === "neutral_default"
-            ? "Neutral default 50. Forum/social sentiment ingestion is not enabled yet."
-            : `${sentiment.label ?? "sentiment"} (${sentiment.source ?? "unknown source"})`}
+            ? "固定为中性默认值 50 —— 论坛与社交情绪数据尚未接入，此项目前不参与判断。"
+            : `${sentiment.label ?? "情绪"}（来源 ${sentiment.source ?? "未知"}）`}
         </Text>
         {sentiment.label && <Tag style={{ marginLeft: 6 }}>{sentiment.label}</Tag>}
       </Descriptions.Item>
@@ -235,7 +307,7 @@ function RiskBreakdown({ risk }: { risk: RiskComponent }) {
       )}
       {(risk.events ?? []).slice(0, 4).map((event) => (
         <div key={`${event.type}-${event.headline}`} style={{ marginTop: 4 }}>
-          <Tag color="volcano">{event.adjustment}</Tag>
+          <StatusPill level="caution" hint="Risk 子分的扣减项">{event.adjustment}</StatusPill>
           <Tag>{event.type}</Tag>
           <Text type="secondary">
             {event.age_days}d ago: {event.reason}. {event.headline}
@@ -266,7 +338,7 @@ function ResourceBreakdown({ resource }: { resource: ResourceComponent }) {
   return (
     <div>
       <div>
-        <Tag color="green">qualitative context auto</Tag>
+        <span className="micro">定性上下文 · 自动</span>
         <Tag>lookback {resource.lookback_days}d</Tag>
         <Tag>contexts {resource.context_count}</Tag>
         <Tag>used {resource.used_count}</Tag>

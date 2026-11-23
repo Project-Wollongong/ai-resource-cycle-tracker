@@ -94,7 +94,7 @@ function WatchlistCard({ onChanged }: { onChanged: () => void }) {
             title: "状态",
             dataIndex: "active",
             width: 80,
-            render: (a: boolean) => (a ? <Tag color="green">活跃</Tag> : <Tag>停用</Tag>),
+            render: (a: boolean) => <Tag>{a ? "活跃" : "停用"}</Tag>,
           },
           {
             title: "操作",

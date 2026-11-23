@@ -93,9 +93,16 @@ export default function SignalTable({
       title: "来源",
       dataIndex: "source",
       width: 80,
-      render: (s: string) => (s === "live" ? <Tag color="green">live</Tag> : <Tag>replay</Tag>),
+      render: (s: string) => <Tag>{s === "live" ? "实时" : "回放"}</Tag>,
     },
-    { title: "标签", dataIndex: "label", width: 120, render: (l: string | null) => <LabelTag label={l} /> },
+    {
+      title: "标签",
+      dataIndex: "label",
+      width: 120,
+      // a replayed signal carries no score by design, which is a different
+      // thing from a stock that has not been scored
+      render: (l: string | null) => <LabelTag label={l} missing="replay" />,
+    },
     {
       title: "原因",
       dataIndex: "reason",

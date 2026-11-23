@@ -85,7 +85,7 @@ export default function Reports() {
               >
                 <Space>
                   {r.report_date}
-                  {r.pushed ? <Tag color="green">Pushed</Tag> : <Tag>Not pushed</Tag>}
+                  <Tag>{r.pushed ? "已推送" : "未推送"}</Tag>
                 </Space>
               </List.Item>
             )}
@@ -268,7 +268,7 @@ function AnnouncementItem({ announcement: a }: { announcement: ReportAnnouncemen
       <Space wrap>
         <Link to={`/stocks/${a.code}`}>{a.code}</Link>
         <Tag>{a.type}</Tag>
-        {a.price_sensitive && <Tag color="red">PS</Tag>}
+        {a.price_sensitive && <span className="micro">重大性</span>}
         <a href={a.url} target="_blank" rel="noreferrer">
           {a.headline}
         </a>

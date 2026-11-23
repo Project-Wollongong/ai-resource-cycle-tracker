@@ -4,6 +4,7 @@ import { Alert, Button, Card, Col, Descriptions, Divider, Drawer, Empty, List, R
 
 import type { Announcement, ScoreBrief, Signal, StockWithScore } from "../api/types";
 import LabelTag from "./LabelTag";
+import StatusPill from "./StatusPill";
 
 const { Text } = Typography;
 
@@ -250,7 +251,11 @@ function AnnouncementDetailPanel({ detail }: { detail: ReturnType<typeof buildAn
                 <Space direction="vertical" size={8} style={{ width: "100%" }}>
                   <Space wrap>
                     <Tag color={item.effective === detail.best ? "magenta" : "blue"}>{item.type ?? "ANNOUNCEMENT"}</Tag>
-                    {item.price_sensitive && <Tag color="red">price sensitive</Tag>}
+                    {item.price_sensitive && (
+                      <StatusPill level="caution" hint="ASX 标记为对股价有重大影响">
+                        重大性
+                      </StatusPill>
+                    )}
                     {item.interval_quality_label && <Tag>{readable(item.interval_quality_label)}</Tag>}
                     {item.materiality_label && <Tag>{readable(item.materiality_label)}</Tag>}
                   </Space>

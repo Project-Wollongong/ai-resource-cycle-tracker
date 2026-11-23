@@ -40,7 +40,7 @@ export function P3VersionReviewTable({
     columns={[
       { title: "Stock", render: (_, row) => row.stock ? `${row.stock.code} · ${row.stock.name}` : "-", width: 170 },
       { title: "前序对象", render: (_, row) => <Space direction="vertical" size={0}><span>{objectLabel(row.predecessor)}</span><Tag>{row.predecessor?.validity_status || "unknown"}</Tag></Space>, width: 230 },
-      { title: "后续对象", render: (_, row) => <Space direction="vertical" size={0}><span>{objectLabel(row.successor)}</span>{row.successor && <Tag color="green">{row.successor.validity_status}</Tag>}</Space>, width: 230 },
+      { title: "后续对象", render: (_, row) => <Space direction="vertical" size={0}><span>{objectLabel(row.successor)}</span>{row.successor && <Tag>{row.successor.validity_status}</Tag>}</Space>, width: 230 },
       { title: "关系", dataIndex: "relation_type", width: 110 },
       { title: "状态", render: (_, row) => <Tag color={row.status === "confirmed" ? "green" : row.status === "rejected" ? "red" : "orange"}>{STATUS_LABELS[row.status]}</Tag>, width: 90 },
       { title: "Family / Fact", render: (_, row) => row.successor?.family || row.predecessor?.family || row.successor?.fact_type || row.predecessor?.fact_type || "-", width: 130 },

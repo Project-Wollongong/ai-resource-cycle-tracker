@@ -58,7 +58,7 @@ export default function P3EntityMappings({ mappings }: { mappings: P3EntityMappi
           render: (_, row) => (
             <Space size={4} wrap>
               <Tag color={row.match_method === "exact_match" ? "blue" : row.match_method === "fuzzy_match" || row.match_method === "model_suggestion" ? "orange" : "purple"}>{METHOD_LABELS[row.match_method]}</Tag>
-              {row.human_locked && <Tag color="green">人工锁定</Tag>}
+              {row.human_locked && <Tag>人工锁定</Tag>}
               <Tag color={row.status === "confirmed" ? "green" : row.status === "review_needed" || row.status === "ambiguous" ? "orange" : "default"}>
                 {row.status === "confirmed" ? "已确认" : row.status === "review_needed" || row.status === "ambiguous" ? "待确认" : row.status === "superseded" ? "已替代" : "已拒绝"}
               </Tag>
