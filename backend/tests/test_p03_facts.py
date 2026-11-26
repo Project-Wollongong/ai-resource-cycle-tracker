@@ -391,3 +391,72 @@ def test_period_ended_inside_a_sentence_does_not_date_a_quarter():
     facts = _section_8(cover, "(5,708)")
 
     assert facts["total_relevant_outgoings"]["as_of_date"] is None
+
+
+def test_a_figure_split_across_lines_is_still_read():
+    """BMN's 2026 filings come out of the PDF one glyph-run per line — "174,6"
+    and "44" land on separate lines — so nothing matches the line pattern."""
+    page = """Quarter ended ("current quarter")
+30
+SEPTEMBER
+2026
+
+8.3
+Total relevant outgoings (
+i
+tem
+8.1 +
+i
+tem
+8.2)
+(
+4,132
+)
+8
+.
+4
+Cash and cash equivalents at quarter end (item 4.6) 174,644
+8
+.
+6
+Total available funding (
+i
+tem
+8
+.
+4
++
+i
+tem
+8
+.
+5
+)
+174,6
+44
+8.7
+"""
+    event = SimpleNamespace(primary_family="F08", active_result=True)
+    facts = {c["fact_type"]: c for c in extract_fact_candidates([event], [page], [])}
+
+    assert facts["total_relevant_outgoings"]["value_numeric"] == -4132.0
+    assert facts["total_available_funding"]["value_numeric"] == 174644.0
+
+
+def test_a_broken_day_digit_does_not_misdate_the_quarter():
+    """BMN's March filing loses the "3" of "31", leaving "1 MARCH 2026". An
+    Appendix 5B always reports to a quarter month's last day, so the month is
+    trusted and the day is not."""
+    facts = _section_8("Quarter ended\n1\nMARCH\n2026", "(8,496)")
+
+    assert facts["total_relevant_outgoings"]["as_of_date"] == datetime(2026, 3, 31).date()
+
+
+def test_the_phrase_in_a_sentence_does_not_date_the_quarter():
+    """HAS's March filing opens "Quarter ended, African Monazite feedstock
+    secured: On 14 April 2026..." — April is not a quarter end."""
+    cover = ('Quarter ended, African Monazite feedstock secured: On 14 April 2026, '
+             'Hastings signed.\nQuarter ended ("current quarter") 31 March 2026')
+    facts = _section_8(cover, "(1,497)")
+
+    assert facts["total_relevant_outgoings"]["as_of_date"] == datetime(2026, 3, 31).date()

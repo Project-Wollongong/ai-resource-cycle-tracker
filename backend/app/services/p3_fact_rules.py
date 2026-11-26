@@ -5,6 +5,7 @@ the document and never compute ratios, growth, runway, discounts or valuations.
 """
 from __future__ import annotations
 
+import calendar
 import re
 from datetime import date
 from typing import Iterable
@@ -129,6 +130,38 @@ def _f04(pages: list[str], sections: list[dict]) -> list[dict]:
     return out
 
 
+def _quarter_end(value: date | None) -> date | None:
+    """An Appendix 5B always reports to the last day of a quarter month.
+
+    A date that is not one did not come from the form's header: either from the
+    wrong sentence — HAS's March 2026 filing opens "Quarter ended, African
+    Monazite feedstock secured: On 14 April 2026..." — or from a day digit that
+    extraction split across two lines, which is how BMN's "31 MARCH" arrives as
+    "1 MARCH". The month is trusted; the day is not.
+    """
+    if value is None or value.month not in (3, 6, 9, 12):
+        return None
+    return date(value.year, value.month, calendar.monthrange(value.year, value.month)[1])
+
+
+def _section_8_item(text: str, label: str, next_item: str, shape: str) -> tuple[str, int, int] | None:
+    """One section 8 figure, for filings whose lines the PDF broke apart.
+
+    Some come out one glyph-run per line — "174,6" and "44" on separate lines —
+    so nothing matches a line-based pattern. The span from an item's label to
+    the next item number holds exactly one parenthetical and one figure, and
+    that is what makes collapsing the whitespace inside it safe; the same move
+    across a cash-flow table would weld adjacent columns into a single number.
+    The anchored shape below is the guard: a window holding anything else
+    yields nothing rather than a wrong figure.
+    """
+    match = re.search(rf"{label}(.{{0,200}}?)(?={next_item})", text, re.S | re.I)
+    if not match:
+        return None
+    value = re.match(shape, re.sub(r"\s+", "", match.group(1)))
+    return (value.group(1), match.start(), match.end()) if value else None
+
+
 def _f08(pages: list[str], sections: list[dict]) -> list[dict]:
     out: list[dict] = []
     quarter_end: date | None = None
@@ -141,7 +174,13 @@ def _f08(pages: list[str], sections: list[dict]) -> list[dict]:
     ytd_start: date | None = None
     ytd_months: int | None = None
     for page, text in enumerate(pages, 1):
-        ended = re.search(r"Quarter ended[\s\S]{0,180}?(\d{1,2}\s+[A-Za-z]+\s+20\d{2})", text, re.I)
+        # First *valid* quarter end, not first match: the phrase also occurs in
+        # prose, where the date that follows belongs to a sentence.
+        ended = next(
+            (m for m in re.finditer(r"Quarter ended[\s\S]{0,180}?(\d{1,2}\s+[A-Za-z]+\s+20\d{2})", text, re.I)
+             if _quarter_end(explicit_date(re.sub(r"\s+", " ", m.group(1))))),
+            None,
+        )
         if ended is None and is_appendix_5b:
             # Some filers title the cover page "FOR THE PERIOD ENDED 31 MARCH
             # 2026" and the form's own "Quarter ended" box survives extraction
@@ -152,7 +191,7 @@ def _f08(pages: list[str], sections: list[dict]) -> list[dict]:
                 r"^[^\S\n]*for the (?:quarter|period) ended\s+(\d{1,2}\s+[A-Za-z]+\s+20\d{2})[^\S\n]*$",
                 text, re.I | re.M)
         if ended:
-            quarter_end = explicit_date(ended.group(1))
+            quarter_end = _quarter_end(explicit_date(re.sub(r"\s+", " ", ended.group(1))))
             if quarter_end:
                 start_month = quarter_end.month - 2
                 period_start = date(quarter_end.year, start_month, 1)
@@ -197,19 +236,31 @@ def _f08(pages: list[str], sections: list[dict]) -> list[dict]:
         # "(item 8.1 + item 8.2)" is skipped as a unit so its own digits can
         # never be mistaken for the value.
         outgoings = re.search(r"8\.3\s+Total relevant outgoings\s*\([^)]{0,40}\)\s*(\([\d,]+\)|[\d,]+)", text, re.I)
-        if outgoings:
-            token = outgoings.group(1)
+        found = ((outgoings.group(1), outgoings.start(), outgoings.end()) if outgoings
+                 else _section_8_item(text, r"Total relevant outgoings", r"8\s*\.\s*4",
+                                      r"^\([^)]{0,40}\)(\([\d,]+\)|[\d,]+)$"))
+        if found:
+            token, span_start, span_end = found
             is_outflow = token.startswith("(")
             magnitude = number(token.strip("()"))
-            out.append(_candidate("F08", "total_relevant_outgoings", "Total Relevant Outgoings", token, page, text, outgoings.start(), outgoings.end(), sections, value_numeric=-magnitude if is_outflow else magnitude, unit_raw="$A\u2019000", currency_raw="$A", quantity_type="amount", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Periodic Cash Flow Update", metadata={"appendix_5b_item": "8.3", "period_basis": "current_quarter", "cash_direction": "outflow" if is_outflow else "net_inflow"}))
+            out.append(_candidate("F08", "total_relevant_outgoings", "Total Relevant Outgoings", token, page, text, span_start, span_end, sections, value_numeric=-magnitude if is_outflow else magnitude, unit_raw="$A\u2019000", currency_raw="$A", quantity_type="amount", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Periodic Cash Flow Update", metadata={"appendix_5b_item": "8.3", "period_basis": "current_quarter", "cash_direction": "outflow" if is_outflow else "net_inflow"}))
         funding = re.search(r"8\.6\s+Total available funding[^\n]*?([\d,]+)\s*\n", text, re.I)
-        if funding:
-            out.append(_candidate("F08", "total_available_funding", "Total Available Funding", funding.group(1), page, text, funding.start(), funding.end(), sections, value_numeric=number(funding.group(1)), unit_raw="$A\u2019000", currency_raw="$A", quantity_type="amount", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Period-end Cash Position", metadata={"appendix_5b_item": "8.6", "period_basis": "period_end"}))
+        found = ((funding.group(1), funding.start(), funding.end()) if funding
+                 else _section_8_item(text, r"Total available funding", r"8\s*\.\s*7",
+                                      r"^\([^)]{0,40}\)([\d,]+)$"))
+        if found:
+            token, span_start, span_end = found
+            out.append(_candidate("F08", "total_available_funding", "Total Available Funding", token, page, text, span_start, span_end, sections, value_numeric=number(token), unit_raw="$A\u2019000", currency_raw="$A", quantity_type="amount", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Period-end Cash Position", metadata={"appendix_5b_item": "8.6", "period_basis": "period_end"}))
         # the value sits after the "(Item 8.6 divided by Item 8.3)" note, which
         # itself contains digits — skip the parenthetical before reading it
         quarters = re.search(r"8\.7\s+Estimated quarters of funding available\s*\(\s*Item[\s\S]{0,40}?\)\s*([\d]+(?:\.[\d]+)?|N/?A)", text, re.I)
-        if quarters and quarters.group(1).upper().replace("/", "") != "NA":
-            out.append(_candidate("F08", "estimated_quarters_funding", "Estimated Quarters of Funding", quarters.group(1), page, text, quarters.start(), quarters.end(), sections, value_numeric=number(quarters.group(1)), unit_raw="quarters", quantity_type="ratio", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Period-end Cash Position", metadata={"appendix_5b_item": "8.7", "entity_reported": True}))
+        found = ((quarters.group(1), quarters.start(), quarters.end()) if quarters
+                 else _section_8_item(text, r"Estimated quarters of funding available",
+                                      r"8\s*\.\s*8|Note\s*:",
+                                      r"^\([^)]{0,60}\)(\d+(?:\.\d+)?|N/?A)$"))
+        if found and found[0].upper().replace("/", "") != "NA":
+            token, span_start, span_end = found
+            out.append(_candidate("F08", "estimated_quarters_funding", "Estimated Quarters of Funding", token, page, text, span_start, span_end, sections, value_numeric=number(token), unit_raw="quarters", quantity_type="ratio", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Period-end Cash Position", metadata={"appendix_5b_item": "8.7", "entity_reported": True}))
         for match in _find(r"\$(\d+(?:\.\d+)?)M cash as at\s+(\d{1,2}\s+[A-Za-z]+\s+20\d{2})", text):
             as_of = explicit_date(match.group(2))
             out.append(_candidate("F08", "cash_balance", "Cash Balance", f"${match.group(1)}M", page, text, match.start(), match.end(), sections, value_numeric=number(match.group(1)), unit_raw="$M", currency_raw="$", quantity_type="amount", status="reported", as_of_date=as_of, event_type_hint="Period-end Cash Position"))
