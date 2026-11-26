@@ -119,6 +119,11 @@ def _apply_lightweight_migrations() -> None:
             conn.exec_driver_sql(
                 "ALTER TABLE score_snapshots ADD COLUMN sentiment_score FLOAT NOT NULL DEFAULT 50.0"
             )
+        signal_columns = {
+            row[1] for row in conn.exec_driver_sql("PRAGMA table_info(analytical_signals)")
+        }
+        if signal_columns and "narrative" not in signal_columns:
+            conn.exec_driver_sql("ALTER TABLE analytical_signals ADD COLUMN narrative TEXT")
         from .models import HistoricalAnalysisSnapshot
 
         HistoricalAnalysisSnapshot.__table__.create(bind=conn, checkfirst=True)

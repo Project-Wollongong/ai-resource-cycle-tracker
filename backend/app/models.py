@@ -1016,6 +1016,9 @@ class AnalyticalSignal(Base):
     key_drivers_json: Mapped[str] = mapped_column(Text, default="[]")
     key_risks_json: Mapped[str] = mapped_column(Text, default="[]")
     logic_version: Mapped[str] = mapped_column(String(80), default="manual_v1")
+    # P05 asks each agent for two outputs: the structured signal above and an
+    # Analytical Narrative. There was nowhere to put the second one.
+    narrative: Mapped[str | None] = mapped_column(Text, nullable=True)
     metadata_json: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 

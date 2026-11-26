@@ -26,6 +26,7 @@ from ..analysis.signals import (
 from ..models import Announcement, CommodityBar, PriceBar, ScoreSnapshot, Signal, Stock
 from .signal_service import persist_signals
 from .p5_p6_adapter import write_p5_p6_compat_records
+from .p5_technical_agent import analyse as run_technical_agent
 
 ANNOUNCEMENT_LOOKBACK_DAYS = 30
 RESOURCE_CONTEXT_LOOKBACK_DAYS = 365
@@ -232,7 +233,13 @@ def score_and_signal_stock(
         .order_by(Signal.id)
         .all()
     )
-    write_p5_p6_compat_records(session, stock, snapshot, day_signals)
+    # P05 Technical Agent reads the price history itself, through its seven
+    # lenses, before the adapter folds anything in. It is handed only bars: it
+    # has no sight of this snapshot, of the announcements behind it, or of any
+    # other engine, which is the whole reason a later agreement between engines
+    # means something.
+    technical_ids = [row.id for row in run_technical_agent(session, stock.id, bars)]
+    write_p5_p6_compat_records(session, stock, snapshot, day_signals, technical_ids)
     return {
         "signals": added,
         "eval_date": eval_date.isoformat(),

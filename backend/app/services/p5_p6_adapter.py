@@ -13,7 +13,6 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ..models import AnalyticalSignal, Announcement, FusionRecord, ScoreSnapshot, Signal, Stock
-from ..analysis.signals import is_confirming, signal_grade
 from .attention_state import update_attention_state_from_fusion
 from .trade_decision import write_trade_decision_from_state
 
@@ -28,9 +27,13 @@ def write_p5_p6_compat_records(
     stock: Stock,
     snapshot: ScoreSnapshot,
     signals: list[Signal],
+    engine_signal_ids: list[int] | None = None,
 ) -> FusionRecord:
+    """`engine_signal_ids` are rows a real P05 engine wrote for itself. The
+    technical readings arrive that way now; this function no longer reshapes
+    price signals into a P5 row, it only folds in what the engine produced."""
     components = _loads(snapshot.components, {})
-    analytical_ids: list[int] = []
+    analytical_ids: list[int] = list(engine_signal_ids or [])
 
     resource = components.get("resource") if isinstance(components.get("resource"), dict) else {}
     if snapshot.resource_score != 50.0 or resource.get("source") not in {None, "neutral_default"}:
@@ -75,34 +78,6 @@ def write_p5_p6_compat_records(
                 key_drivers=_announcement_drivers(announcement),
                 key_risks=[],
                 metadata={"score": snapshot.announcement_score, "component": announcement},
-            ).id
-        )
-
-    for signal in signals:
-        if signal.signal_type not in TECHNICAL_SIGNAL_TYPES:
-            continue
-        analytical_ids.append(
-            _upsert_analytical_signal(
-                session,
-                stock_id=stock.id,
-                signal_date=snapshot.date,
-                engine="technical",
-                direction="positive" if is_confirming(signal.signal_type) else "neutral",
-                magnitude=_technical_magnitude(signal),
-                confidence=0.75,
-                persistence="short",
-                source_event_id=f"signal:{signal.id}",
-                dependency_group=f"market:{snapshot.date.isoformat()}",
-                evidence_ids=[],
-                feature_ids=[],
-                key_drivers=[signal.reason],
-                key_risks=[],
-                metadata={
-                    "grade": signal_grade(signal.signal_type),
-                    "signal_id": signal.id,
-                    "signal_type": signal.signal_type,
-                    "evidence": _loads(signal.evidence, {}),
-                },
             ).id
         )
 
@@ -396,22 +371,6 @@ def _announcement_drivers(announcement: dict[str, Any]) -> list[str]:
             if typ or headline:
                 drivers.append(": ".join(str(v) for v in (typ, headline) if v))
     return drivers
-
-
-def _technical_magnitude(signal: Signal) -> float:
-    # A longer window is not a stronger signal. BREAKOUT_252D measured worse
-    # than every other rule past +5d, so it carries the lowest weight despite
-    # spanning the longest window.
-    if signal.signal_type == "BREAKOUT_252D":
-        return 30.0
-    if signal.signal_type == "BREAKOUT_60D":
-        return 70.0
-    evidence = _loads(signal.evidence, {})
-    rel_vol = evidence.get("rel_vol") if isinstance(evidence, dict) else None
-    try:
-        return min(90.0, 50.0 + float(rel_vol) * 8.0)
-    except (TypeError, ValueError):
-        return 60.0
 
 
 def _blocking_conditions(risk_score: float, risk: dict[str, Any]) -> list[str]:

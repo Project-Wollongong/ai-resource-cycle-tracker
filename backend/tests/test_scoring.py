@@ -469,20 +469,26 @@ def test_score_and_signal_stock_writes_p5_p6_compat_records_idempotently(db_sess
     analytical = db_session.query(AnalyticalSignal).filter_by(stock_id=stock.id).all()
     assert sorted({row.engine for row in analytical}) == ["catalyst", "fundamental", "technical"]
     assert len(analytical) == 3
-    assert {row.logic_version for row in analytical} == {"cycle_score_adapter_v1"}
+    # the technical rows come from the P05 agent now and carry its own version;
+    # only the two the adapter still reshapes carry the adapter's
+    by_engine = {row.engine: row.logic_version for row in analytical}
+    assert by_engine["technical"] == "technical_seven_lens_v1"
+    assert by_engine["catalyst"] == by_engine["fundamental"] == "cycle_score_adapter_v1"
     # The drilling announcement drives both the fundamental and catalyst
     # engines. That is one event, so it must occupy one dependency group —
     # otherwise P6 reads a single announcement as two independent
     # confirmations. source_event_id still carries the document id.
     assert {row.source_event_id for row in analytical} == {
         "announcement:p56-drill",
-        "signal:1",
+        f"technical_lens:participation:{eval_date.isoformat()}",
     }
     by_engine = {row.engine: row.dependency_group for row in analytical}
     event_group = f"announcement_event:{eval_date.isoformat()}:exploration"
     assert by_engine["fundamental"] == event_group
     assert by_engine["catalyst"] == event_group
-    assert by_engine["technical"] == f"market:{eval_date.isoformat()}"
+    # the technical agent groups its seven lenses under one price-action key,
+    # so a day of agreeing lenses is one source rather than seven
+    assert by_engine["technical"] == f"price_action:{eval_date.isoformat()}"
 
     fusion = db_session.query(FusionRecord).filter_by(stock_id=stock.id, fusion_date=eval_date).one()
     assert fusion.rule_version == "fusion_adapter_v1"
@@ -593,11 +599,15 @@ def test_neutral_signals_do_not_count_toward_confirmation(db_session):
     assert _engines(db_session, ids) == {"catalyst"}
 
 
-def test_breakout_252d_carries_the_lowest_technical_weight():
-    """Window length is not strength: the longest window measured the worst."""
-    from app.services.p5_p6_adapter import _technical_magnitude
+def test_breakout_252d_still_cannot_pass_for_confirmation():
+    """Window length is not strength: the longest window measured the worst.
+    The adapter used to express that as a lower weight; the technical agent now
+    expresses it where the reading is made, by withholding a direction."""
+    from app.analysis.technical_lenses import breakout
+    from tests.test_technical_lenses import bars, flat
 
-    def magnitude(signal_type):
-        return _technical_magnitude(Signal(signal_type=signal_type, evidence="{}"))
+    year_high = breakout(bars(flat(260) + [2.0]))
+    sixty_day_high = breakout(bars(flat(61) + [1.5]))
 
-    assert magnitude("BREAKOUT_252D") < magnitude("BREAKOUT_60D")
+    assert year_high.direction == "neutral"
+    assert sixty_day_high.direction == "positive"
