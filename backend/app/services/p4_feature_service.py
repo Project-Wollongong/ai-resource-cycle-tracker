@@ -103,91 +103,170 @@ def _upsert(
     return row
 
 
+def _facts_by_quarter(session: Session, stock_id: int, fact_type: str) -> dict:
+    """Every live reading of one item, keyed by the quarter it reports on."""
+    rows = (
+        _live_facts(session.query(P3Fact))
+        .filter(
+            P3Fact.stock_id == stock_id,
+            P3Fact.fact_type == fact_type,
+            P3Fact.fact_family == "F08",
+        )
+        .order_by(P3Fact.as_of_date, P3Fact.id)
+        .all()
+    )
+    # a quarter re-filed under a corrected parse keeps the newest reading
+    return {row.as_of_date: row for row in rows if row.as_of_date}
+
+
 def compute_funding_features(session: Session, stock_id: int) -> dict:
-    """Cash runway from the latest Appendix 5B. Returns a summary dict.
+    """Cash runway for every quarter on file, plus the change between them.
 
     Runway = total available funding (item 8.6) / total relevant outgoings
     (item 8.3). The entity publishes its own figure in item 8.7; we recompute
-    rather than trust it, then record the difference so a parsing error or a
+    rather than trust it and record the difference, so a parsing error or a
     company arithmetic slip surfaces instead of passing through silently.
+
+    Computed per quarter rather than for the latest filing alone. A single
+    runway says almost nothing — 3.08 quarters reads as comfortable — while the
+    sequence behind it is the actual finding: four readings showing available
+    funding down 79% say the company is heading for a raise. The quarter-on-
+    quarter change is emitted as its own feature for the same reason.
     """
-    outgoings_fact = _latest_fact(session, stock_id, ITEM_8_3)
-    funding_fact = _latest_fact(session, stock_id, ITEM_8_6)
-    outgoings = _numeric(outgoings_fact)
-    funding = _numeric(funding_fact)
+    outgoings_by_q = _facts_by_quarter(session, stock_id, ITEM_8_3)
+    funding_by_q = _facts_by_quarter(session, stock_id, ITEM_8_6)
+    reported_by_q = _facts_by_quarter(session, stock_id, ITEM_8_7)
 
-    if outgoings is None or funding is None:
+    quarters = sorted(set(outgoings_by_q) & set(funding_by_q))
+    if not quarters:
         return {"status": "insufficient_facts", "features": 0}
-    burn = abs(outgoings)
-    if burn == 0:
-        return {"status": "zero_outgoings", "features": 0}
 
-    as_of = outgoings_fact.as_of_date or funding_fact.as_of_date
-    if as_of is None:
-        return {"status": "no_as_of_date", "features": 0}
+    written = 0
+    history: list[dict] = []
+    previous_funding: float | None = None
 
-    reported_fact = _latest_fact(session, stock_id, ITEM_8_7)
-    reported = _numeric(reported_fact)
-    runway = round(funding / burn, 2)
-    variance = round(runway - reported, 2) if reported is not None else None
+    for as_of in quarters:
+        outgoings_fact = outgoings_by_q[as_of]
+        funding_fact = funding_by_q[as_of]
+        outgoings = _numeric(outgoings_fact)
+        funding = _numeric(funding_fact)
+        if outgoings is None or funding is None:
+            continue
+        burn = abs(outgoings)
+        if burn == 0:
+            continue
 
-    evidence = {
-        "formula": "total_available_funding / abs(total_relevant_outgoings)",
-        "inputs": {"total_available_funding": funding, "total_relevant_outgoings": outgoings},
-        "source_pages": {
-            "total_available_funding": funding_fact.source_page,
-            "total_relevant_outgoings": outgoings_fact.source_page,
-        },
-        "entity_reported_quarters": reported,
-        "variance_vs_entity_reported": variance,
-    }
-    refs = [outgoings_fact.id, funding_fact.id]
-    metadata = {
-        "appendix_5b_items": ["8.3", "8.6", "8.7"],
-        # 8.8 only has to be answered when the entity reports under 2 quarters,
-        # which is also the level at which a raise becomes near-certain
-        "below_asx_disclosure_threshold": runway < 2.0,
-    }
-    if reported_fact is not None:
-        refs.append(reported_fact.id)
+        reported = _numeric(reported_by_q.get(as_of))
+        runway = round(funding / burn, 2)
+        variance = round(runway - reported, 2) if reported is not None else None
 
-    _upsert(
-        session,
-        stock_id=stock_id,
-        as_of_date=as_of,
-        feature_name="cash_runway_quarters",
-        value=runway,
-        unit="quarters",
-        input_refs=refs,
-        evidence=evidence,
-        metadata=metadata,
-        evidence_document_id=outgoings_fact.evidence_document_id,
-    )
-    _upsert(
-        session,
-        stock_id=stock_id,
-        as_of_date=as_of,
-        feature_name="quarterly_burn",
-        value=burn,
-        unit=outgoings_fact.unit,
-        input_refs=[outgoings_fact.id],
-        evidence={
-            "formula": "abs(total_relevant_outgoings)",
-            "inputs": {"total_relevant_outgoings": outgoings},
-            "source_pages": {"total_relevant_outgoings": outgoings_fact.source_page},
-        },
-        metadata={"appendix_5b_items": ["8.3"]},
-        evidence_document_id=outgoings_fact.evidence_document_id,
-    )
+        refs = [outgoings_fact.id, funding_fact.id]
+        reported_fact = reported_by_q.get(as_of)
+        if reported_fact is not None:
+            refs.append(reported_fact.id)
+
+        _upsert(
+            session,
+            stock_id=stock_id,
+            as_of_date=as_of,
+            feature_name="cash_runway_quarters",
+            value=runway,
+            unit="quarters",
+            input_refs=refs,
+            evidence={
+                "formula": "total_available_funding / abs(total_relevant_outgoings)",
+                "inputs": {
+                    "total_available_funding": funding,
+                    "total_relevant_outgoings": outgoings,
+                },
+                "source_pages": {
+                    "total_available_funding": funding_fact.source_page,
+                    "total_relevant_outgoings": outgoings_fact.source_page,
+                },
+                "entity_reported_quarters": reported,
+                "variance_vs_entity_reported": variance,
+            },
+            metadata={
+                "appendix_5b_items": ["8.3", "8.6", "8.7"],
+                # 8.8 only has to be answered when the entity reports under 2
+                # quarters, which is also the level at which a raise becomes
+                # near-certain
+                "below_asx_disclosure_threshold": runway < 2.0,
+            },
+            evidence_document_id=outgoings_fact.evidence_document_id,
+        )
+        _upsert(
+            session,
+            stock_id=stock_id,
+            as_of_date=as_of,
+            feature_name="quarterly_burn",
+            value=burn,
+            unit=outgoings_fact.unit,
+            input_refs=[outgoings_fact.id],
+            evidence={
+                "formula": "abs(total_relevant_outgoings)",
+                "inputs": {"total_relevant_outgoings": outgoings},
+                "source_pages": {"total_relevant_outgoings": outgoings_fact.source_page},
+            },
+            metadata={"appendix_5b_items": ["8.3"]},
+            evidence_document_id=outgoings_fact.evidence_document_id,
+        )
+        written += 2
+
+        # The comparison the architecture asks for and a single filing can
+        # never supply: how much the funding position moved since last quarter.
+        if previous_funding not in (None, 0):
+            change_pct = round((funding / previous_funding - 1) * 100, 1)
+            _upsert(
+                session,
+                stock_id=stock_id,
+                as_of_date=as_of,
+                feature_name="available_funding_change_pct",
+                value=change_pct,
+                unit="%",
+                input_refs=[funding_fact.id],
+                evidence={
+                    "formula": "available_funding / previous_quarter_available_funding - 1",
+                    "inputs": {
+                        "available_funding": funding,
+                        "previous_quarter": previous_funding,
+                    },
+                },
+                metadata={"depleting": change_pct < 0},
+                evidence_document_id=funding_fact.evidence_document_id,
+            )
+            written += 1
+
+        previous_funding = funding
+        history.append(
+            {
+                "as_of_date": as_of,
+                "cash_runway_quarters": runway,
+                "quarterly_burn": burn,
+                "available_funding": funding,
+                "entity_reported_quarters": reported,
+                "variance_vs_entity_reported": variance,
+            }
+        )
+
+    if not history:
+        return {"status": "insufficient_facts", "features": 0}
+
     session.commit()
+    latest = history[-1]
     return {
         "status": "ok",
-        "features": 2,
-        "as_of_date": as_of,
-        "cash_runway_quarters": runway,
-        "quarterly_burn": burn,
-        "entity_reported_quarters": reported,
-        "variance_vs_entity_reported": variance,
+        "features": written,
+        "quarters": len(history),
+        # the latest quarter is promoted to the top level: callers that only
+        # want "where does this stand now, and does it match what the company
+        # said" should not have to walk the history to find out
+        "as_of_date": latest["as_of_date"],
+        "cash_runway_quarters": latest["cash_runway_quarters"],
+        "quarterly_burn": latest["quarterly_burn"],
+        "entity_reported_quarters": latest["entity_reported_quarters"],
+        "variance_vs_entity_reported": latest["variance_vs_entity_reported"],
+        "history": history,
     }
 
 

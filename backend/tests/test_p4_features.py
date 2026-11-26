@@ -309,3 +309,69 @@ def test_unsupported_unit_pairings_are_left_alone(db_session):
 
     result = compute_resource_reconciliation(db_session, stock.id)
     assert result["status"] == "no_reconcilable_rows"
+
+
+def test_every_quarter_on_file_gets_its_own_runway(db_session):
+    """A single runway says almost nothing — 3.08 quarters reads as comfortable.
+    The sequence is the finding, so each quarter is computed, not just the last."""
+    stock, evidence_id = _stock(db_session, "SERIES")
+    quarters = [
+        (date(2025, 12, 31), -1000.0, 8000.0),
+        (date(2026, 3, 31), -1000.0, 5000.0),
+        (date(2026, 6, 30), -1000.0, 2000.0),
+    ]
+    for as_of, outgoings, funding in quarters:
+        db_session.add_all([
+            _fact(stock.id, evidence_id, "total_relevant_outgoings", outgoings, as_of=as_of),
+            _fact(stock.id, evidence_id, "total_available_funding", funding, as_of=as_of),
+        ])
+    db_session.commit()
+
+    result = compute_funding_features(db_session, stock.id)
+
+    assert result["quarters"] == 3
+    assert [h["cash_runway_quarters"] for h in result["history"]] == [8.0, 5.0, 2.0]
+    # the latest quarter is what the top level reports
+    assert result["cash_runway_quarters"] == 2.0
+    assert result["as_of_date"] == date(2026, 6, 30)
+
+    rows = db_session.query(P4Feature).filter_by(
+        stock_id=stock.id, feature_name="cash_runway_quarters"
+    ).all()
+    assert len(rows) == 3
+
+
+def test_quarter_on_quarter_change_is_emitted(db_session):
+    """The comparison the architecture asks for and one filing can never give."""
+    stock, evidence_id = _stock(db_session, "DELTA")
+    for as_of, funding in ((date(2026, 3, 31), 4000.0), (date(2026, 6, 30), 1000.0)):
+        db_session.add_all([
+            _fact(stock.id, evidence_id, "total_relevant_outgoings", -500.0, as_of=as_of),
+            _fact(stock.id, evidence_id, "total_available_funding", funding, as_of=as_of),
+        ])
+    db_session.commit()
+
+    compute_funding_features(db_session, stock.id)
+
+    row = db_session.query(P4Feature).filter_by(
+        stock_id=stock.id, feature_name="available_funding_change_pct"
+    ).one()
+    assert json.loads(row.value_json)["numeric"] == -75.0
+    assert json.loads(row.metadata_json)["depleting"] is True
+    # the first quarter has nothing to compare against
+    assert row.as_of_date == date(2026, 6, 30)
+
+
+def test_a_single_quarter_emits_no_change_feature(db_session):
+    stock, evidence_id = _stock(db_session, "ONEQ")
+    db_session.add_all([
+        _fact(stock.id, evidence_id, "total_relevant_outgoings", -1000.0),
+        _fact(stock.id, evidence_id, "total_available_funding", 3000.0),
+    ])
+    db_session.commit()
+
+    compute_funding_features(db_session, stock.id)
+
+    assert db_session.query(P4Feature).filter_by(
+        stock_id=stock.id, feature_name="available_funding_change_pct"
+    ).count() == 0
