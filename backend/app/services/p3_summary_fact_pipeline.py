@@ -21,7 +21,15 @@ STANDARD_FORMS = frozenset({"Appendix 5B", "Appendix 4C"})
 # A requirement is a semantic slot.  Any listed fact type satisfies the slot.
 # Slots are activated by the classified Event, not merely by words in the body.
 _EVENT_REQUIREMENTS: tuple[tuple[str, str, tuple[tuple[str, tuple[str, ...]], ...]], ...] = (
-    ("F04", r"DFS|Feasibility|Study", (("study_type", ("study_type",)),)),
+    ("F04", r"DFS|Feasibility|Study", (
+        ("study_type", ("study_type",)),
+        # A study announcement whose summary names the study but gives no
+        # numbers leaves its economics unread: the planner stops at the
+        # summary once every slot is filled, and "study_type" alone was always
+        # filled. One slot satisfied by any of the figures sends the planner
+        # into the body for the ones that matter.
+        ("project_economics", ("npv", "irr", "payback", "capex", "opex", "aisc")),
+    )),
     ("F04", r"Schedule|Timeline", (("schedule_timing", ("dfs_completion", "first_ore_timing", "first_production_timing", "timeline_change")),)),
     ("F04", r"Delay", (("timeline_change", ("timeline_change",)), ("previous_timing", ("original_timing",)))),
     ("F04", r"FID", (("fid_timing", ("fid_timing",)),)),

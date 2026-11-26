@@ -49,6 +49,7 @@
       "summary_coverage_ratio": 1.0,
       "unfound_fields": {
         "family_rule_slots": [
+          "F04.project_economics",
           "F05.approval_status"
         ],
         "required_fact_types": []
@@ -113,7 +114,8 @@
         "family_rule_slots": [
           "F03.processing_route",
           "F03.test_programme",
-          "F04.construction_progress"
+          "F04.construction_progress",
+          "F04.project_economics"
         ],
         "required_fact_types": []
       },
@@ -302,7 +304,9 @@
       "source_insufficient": true,
       "summary_coverage_ratio": 1.0,
       "unfound_fields": {
-        "family_rule_slots": [],
+        "family_rule_slots": [
+          "F04.project_economics"
+        ],
         "required_fact_types": []
       },
       "required_fact_types": [

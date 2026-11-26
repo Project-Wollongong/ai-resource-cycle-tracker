@@ -12,6 +12,7 @@ from typing import Iterable
 
 from .p3_value_normalizer import currency, explicit_date, number, period_range, source_excerpt, unit
 from .p3_resource_table import parse_resource_rows
+from .p3_economics import extract_economics
 
 EXTRACTOR_NAME = "deterministic_p3_fact_extractor"
 EXTRACTOR_VERSION = "p3_fact_v3_entity_consistency"
@@ -110,23 +111,29 @@ def _f04(pages: list[str], sections: list[dict]) -> list[dict]:
         for match in _find(r"DFS is on track for delivery\s+(H[12]\s+20\d{2})", text):
             raw = match.group(1); pstart, pend, method = period_range(raw)
             out.append(_candidate("F04", "dfs_completion", "DFS Completion", raw, page, text, match.start(), match.end(), sections, value_text=raw, quantity_type="date", status="targeted", period_start=pstart, period_end=pend, event_type_hint="Project Schedule / Timeline Update", metadata={"conversion_method": method}))
-        for label, fact_type, pattern, qtype in (
-            ("NPV", "npv", r"\bNPV\b[^\d$A]*(A?\$|US\$)?\s*([\d,.]+)\s*(million|billion|m|bn)?", "amount"),
-            ("IRR", "irr", r"\bIRR\b[^\d]*(\d+(?:\.\d+)?)\s*%", "percentage"),
-            ("Payback", "payback", r"\bPayback\b[^\d]*(\d+(?:\.\d+)?)\s*(years?|months?)", "duration"),
-            ("CAPEX", "capex", r"\bCAPEX\b[^\d$A]*(A?\$|US\$)?\s*([\d,.]+)\s*(million|billion|m|bn)?", "amount"),
-            ("OPEX", "opex", r"\bOPEX\b[^\d$A]*(A?\$|US\$)?\s*([\d,.]+)\s*([^\s,;.]+)?", "amount"),
-            ("AISC", "aisc", r"\bAISC\b[^\d$A]*(A?\$|US\$)?\s*([\d,.]+)\s*([^\s,;.]+)?", "amount"),
-        ):
-            for match in _find(pattern, text):
-                groups = match.groups(); raw = match.group(0)
-                if fact_type in {"irr"}:
-                    numeric, raw_unit, raw_currency = number(groups[0]), "%", None
-                elif fact_type == "payback":
-                    numeric, raw_unit, raw_currency = number(groups[0]), groups[1], None
-                else:
-                    numeric, raw_unit, raw_currency = number(groups[1]), groups[2] if len(groups) > 2 else None, groups[0]
-                out.append(_candidate("F04", fact_type, label, raw, page, text, match.start(), match.end(), sections, value_numeric=numeric, unit_raw=raw_unit, currency_raw=raw_currency, quantity_type=qtype, status="estimated", event_type_hint="Study Update"))
+        # Project economics moved out to its own module: matching the acronym
+        # alone found two capital estimates across seventy-two filings that
+        # discuss one, while loosening the term without guarding the number
+        # read years, ISO standard numbers and sensitivity steps as dollars.
+        for item in extract_economics(text):
+            metadata = {"basis": item["basis"]}
+            if item["fact_type"] == "npv":
+                metadata.update({
+                    "discount_rate_pct": item.get("discount_rate_pct"),
+                    "tax_basis": item.get("tax_basis"),
+                    # an NPV without its discount rate cannot be compared with
+                    # another NPV, so the gap is recorded rather than hidden
+                    "complete": item.get("complete"),
+                })
+            if item.get("scale_word"):
+                metadata["scale_word"] = item["scale_word"]
+            out.append(_candidate(
+                "F04", item["fact_type"], item["label"], item["raw"], page, text,
+                item["start"], item["end"], sections,
+                value_numeric=item["numeric"], unit_raw=item.get("unit"),
+                currency_raw=item.get("currency"), quantity_type=item["quantity_type"],
+                status="estimated", event_type_hint="Study Update", metadata=metadata,
+            ))
     return out
 
 

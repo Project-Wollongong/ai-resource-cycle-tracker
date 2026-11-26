@@ -303,6 +303,59 @@ Catalyst 的依赖组按**触发来源**决定，而不是一律按引擎：
 
 这样一份钻探公告同时推动 Fundamental 与 Catalyst 时，P06 只记一份证据；而「项目卡在 FID 前」这种跨越整段历史的判断，才算独立的第三方意见。
 
+## 项目经济性抽取
+
+Fundamental 的第 5 视角（项目经济性）所需的数字——NPV、IRR、CAPEX、OPEX、AISC、回收期——由 [`p3_economics.py`](backend/app/services/p3_economics.py) 从研究类公告正文抽取。这是三个需要读散文的视角之外、唯一能用规则做干净的一个。
+
+### 为什么不是「匹配术语 + 匹配数字」
+
+三件事让它比看上去难，每一条都是在本项目 301 份真实原文上实测出来的：
+
+**术语往往不是缩写。** 资本开支写成 `initial capital expenditure of A$277 million` 的次数远多于 `CAPEX`；全维持成本基本都是全称。只认缩写时，72 份讨论资本估算的文档里只抽出 2 份。
+
+**缩写往往不是术语。** `irr` 作为子串出现 215 次，真正是内部收益率的只有 84 次，其余藏在 `irregular` 和 `Irrigation Act` 里。词边界能解决这个，但解决不了下一层：术语表里的 `NPV Net present value NSW New South Wales` 是定义，风控段落里的 `project value (NPV)` 既不是定义也不是数字。两者都靠**要求数值紧挨术语**排除，而不是「术语之后的某处」。
+
+**NPV 没有折现率就不是一个数。** A$1.5bn @ 6.5% 和 A$1.5bn @ 10% 描述的是不同的项目。读不到折现率时，该数字标为 `complete: false`，而不是悄悄当成可比数据发出去。
+
+### 四道守卫，各自对应一类实测误报
+
+| 守卫 | 挡住的 |
+|---|---|
+| 词边界 | `irregular`、`Irrigation Act` |
+| 数值必须紧跟术语（70 字符内） | 术语表、风控套话捐赠的无关数字 |
+| 金额必须带货币符号**或**量级词 | `commencing in 2029`（年份）、`+/- 10`（敏感性步长）、`ISO 31000`、`NPV7`（折现率被当成金额） |
+| 项目级金额下限 100 万 | `NPV (Scaled @ $4.30`（每股换算系数） |
+| 不跨句子边界 | `IRR . Wyloo has commenced a formal sale process…60%` —— 那个 60% 属于出售，不属于项目 |
+
+句号后加空格才算句子结束——数字里的小数点不算；冒号也不算，它通常正是引出数值的那个符号（`Capital cost: A$120 million`）。
+
+### 归属：同一个数字，不同的主张
+
+公司报告「已经做到」的成本，和研究报告「预计能做到」的成本，是两种不同的主张；独立专家对公司的估值又是第三种。每条记录带 `basis`：
+
+| 取值 | 线索 |
+|---|---|
+| `actual_result` | produced、actual、guidance、FY27 |
+| `study_estimate` | study、DFS、PFS、scoping、base case |
+| `third_party` | independent expert、the Scheme、valuation range |
+| `unknown` | 没有线索时的默认——**不假定是研究估算** |
+
+### 摘要优先的代价
+
+P03 默认只读 Summary / Highlights，字段齐了就不往正文走。而 DFS 事件原先只要求 `study_type`，摘要里必然有，于是正文里的经济性数字永远读不到：改抽取器后 NPV 只从 1 条变成 7 条。
+
+把 `project_economics` 加进 DFS 事件的字段要求后（一个槽位，六种数字任一满足即可），缺这些数字的研究公告会自动下探正文。结果：
+
+| 指标 | 改前 | 改后 |
+|---|---|---|
+| NPV | 1 | **22** |
+| IRR | 6 | **21** |
+| 回收期 | 2 | **10** |
+| AISC | 2 | **6** |
+| CAPEX | 2 | **5** |
+
+冻结基线相应新增三条 `F04.project_economics` 未找到标记——核对过，那三份样本正文里只有「capital cost estimate has been received」这类**没有数字的定性表述**，报未找到是正确答案。事实数与信息点数一条未变。
+
 ## P04 衍生指标
 
 P03 记录公司说了什么，P04 把这些陈述变成可比较的数字。P04 不重读文档：每个指标都标注它由哪些 P03 事实算出、用的什么公式、来自原文第几页，因此屏幕上的任何一个数都能走回它所出自的那句话。指标为追加写入并带 `formula_version`，改定义不会重写历史——换个版本重算，然后比较两者。
