@@ -191,7 +191,7 @@ Funding Score 仍会计算并展示，但它现在定位为独立的资金确认
 | 1 | 信号生成（`analysis/signals.py`） | 突破本身就要求放量（`breakout_rel_vol` 默认 1.5），所以创新高当天若放量达标，`BREAKOUT_*` 和 `REL_VOL_SPIKE` 会同时触发。两者机械耦合，不是两次独立观察 | 已处理 |
 | 2 | 回测统计（`services/backtest.py`） | 同一股票同一天的多个信号，入场价相同、前向收益完全相同。按信号条数统计会虚增样本量；按标签或分数段分组时，它们还会落进同一组被当成多个独立样本 | 已处理 |
 | 3 | P5/P6 证据独立性（`services/p5_p6_adapter.py`） | `dependency_group` 原先以单份公告 ID 为键。公司常为同一件事一次发好几份文件（年报 + Appendix 4G + MD&A；收购公告 + 投资者演示），会被判成多个独立来源 | 已处理 |
-| 4 | Cycle Score 子分（`services/scoring_service.py`） | `announcement_score`（权重 0.40）与 `resource_score`（权重 0.20）读取同一批 `Announcement` 行。一份钻探公告可同时抬高两者，相当于让单一事件推动 Cycle Score 的 60% | **未处理** |
+| 4 | Cycle Score 子分（`analysis/scoring.py`） | `announcement_score`（权重 0.40）与 `resource_score`（权重 0.20）都读 `ai_metrics` 里的 `interval_quality_label` 与 `materiality_label`。一份钻探公告的同一组标签会同时抬高两个子分 | 已处理 |
 
 ### 处理方式
 
@@ -213,9 +213,11 @@ role      = primary | secondary
 
 **P5/P6 层：按事件族归组。** `dependency_group` 改为 `announcement_event:{日期}:{事件族}`，公告类型映射到 administrative / commercial / development / exploration / financial / funding / other / ownership / resource（见 `ANN_TYPE_TO_EVENT_FAMILY`）。`source_event_id` 仍保留文档 ID，证据链可追溯。`_evidence_independence()` 统计的是不同 `dependency_group` 的数量，而非信号条数，因此同一事件衍生的多条信号只算一份证据。
 
-### 尚未处理
+**Cycle Score 层：质量标签只归一侧。** 两个子分读的是同一组标签，但分工不同——`announcement_score` 回答「发生了什么、多新、是否价格敏感」，`resource_score` 回答「这个结果好不好」。质量与重要性描述的是内容本身，因此只留给 `resource_score`，它还会结合趋势、深度、分位数一起判断，读得更完整。
 
-**Cycle Score 子分之间的同源计分（上表 #4）。** `_resource_score_from_contexts()` 与公告子分读取同一批公告行，二者没有共享去重键。当前 `AI_ANALYZER=noop`，`resource_score` 恒为默认 50，该问题不会显现；一旦启用 `rules_fulltext` 或 `claude` 分析器，同源放大会立即生效。修复前请留意：此时的 Cycle Score 高分可能来自一个事件，而非多维共振。
+重叠部分原先是 `announcement_score` 里一个封顶 10 分的加成，叠加价格敏感系数与权重后，最多影响约 4.8 个 Cycle Score 点——不足以跨两级标签，但足以让一只股票从 `Monitor` 跨到 `Watch Closely`。移除时 `AI_ANALYZER=noop`，加成恒为 0，因此历史分数一分未变。标签本身仍写入 `components.announcement`，供阅读，不参与计分。
+
+### 尚未处理
 
 **事件族划分偏粗。** 同一天的两份互不相关的钻探公告会被归入同一事件族，因而被当作一份证据。这是刻意选择的保守方向——宁可低估共振，也不要制造虚假共振。待 P03 把事件类型抽取稳定后，可以改为按真实事件聚合。
 
@@ -360,7 +362,7 @@ npm run build
 6. Risk Score 第一版不会推断现金 runway、融资折价、债务或完整稀释条款；这些需要后续从 Appendix 5B、融资公告和股本结构中结构化抽取。
 7. 规则全文分析只做窄范围抽取，不能替代地质、矿权、财务和估值尽调。
 8. `claude` 分析器只有在显式允许付费调用且配置 API key 时才会运行。
-9. Cycle Score 的 `announcement` 与 `resource` 两个子分读取同一批公告，存在同源重复计分（合计权重 0.60）。当前 `AI_ANALYZER=noop` 时 `resource` 恒为 50 不会显现，启用正文分析器后会生效，详见「信号与评分的去重 / 尚未处理」。
+9. 质量与重要性标签只计入 `resource` 子分（权重 0.20），`announcement` 子分不再读取它们——两者原先同时计分，详见「信号与评分的去重」。
 10. P04 指标依赖对应的公告类型：没有 Appendix 5B 就没有现金跑道，没有融资公告就没有折价。ASX 接口每支股票仅返回最近 5 份文件，因此多数股票当前无 P04 数据；历史文档需经管理员接口或批量导入工具补全。
 11. 资源量交叉校验只覆盖 JORC 表中单位配对明确的行；ppm、lb、oz/t 等不作换算，相应行不产生校验结果，不代表数据已通过检查。
 

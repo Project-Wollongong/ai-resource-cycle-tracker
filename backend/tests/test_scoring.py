@@ -190,7 +190,10 @@ def test_announcement_low_base_gets_no_bonus():
     assert comps["bonus"] == 0
 
 
-def test_announcement_qualitative_context_adds_bounded_bonus_and_components():
+def test_announcement_score_ignores_context_quality_but_still_reports_it():
+    """The quality and materiality labels belong to the resource sub-score,
+    which reads them alongside trend, depth and percentile. Scoring them here
+    too let one drill result move 0.40 and 0.20 of the cycle score at once."""
     score, comps = announcement_score(
         [
             ann(
@@ -214,10 +217,14 @@ def test_announcement_qualitative_context_adds_bounded_bonus_and_components():
         AS_OF,
     )
 
-    contextual = comps["announcements"][0]
-    assert score == 83.0
-    assert contextual["qualitative_bonus"] == 8.0
-    assert contextual["adjusted_base"] == 78.0
+    by_headline = {item["headline"]: item for item in comps["announcements"]}
+    contextual = by_headline["contextual drill result"]
+    # both are type_score 70, same day, neither price-sensitive, so the
+    # labelled one must no longer outscore the plain one
+    assert score == 75.0
+    assert contextual["effective"] == by_headline["high quality drill result"]["effective"]
+    assert "qualitative_bonus" not in contextual
+    # still reported, so the reader can see what the labels said
     assert contextual["interval_quality_label"] == "strong"
     assert contextual["materiality_label"] == "high"
     assert contextual["grade_thickness"] == 45.0
@@ -225,7 +232,7 @@ def test_announcement_qualitative_context_adds_bounded_bonus_and_components():
     assert comps["bonus"] == 5
 
 
-def test_score_snapshot_announcement_components_include_qualitative_context(db_session):
+def test_one_announcement_moves_the_resource_score_only(db_session):
     stock = Stock(code="TST", name="Test Resources", commodity="gold")
     db_session.add(stock)
     db_session.commit()
@@ -284,7 +291,10 @@ def test_score_snapshot_announcement_components_include_qualitative_context(db_s
     ann_item = components["announcement"]["announcements"][0]
     assert ann_item["ann_id"] == "ann-context"
     assert ann_item["url"] == "https://example.com/ann.pdf"
-    assert ann_item["qualitative_bonus"] == 8.0
+    # the labels reach the resource sub-score (weight 0.20) and stop there;
+    # counting them in the announcement sub-score (0.40) as well let a single
+    # filing move both at once
+    assert "qualitative_bonus" not in ann_item
     assert ann_item["interval_quality_label"] == "strong"
     assert ann_item["materiality_label"] == "high"
     assert ann_item["grade_thickness"] == 45.0

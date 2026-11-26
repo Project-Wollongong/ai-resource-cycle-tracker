@@ -138,12 +138,13 @@ def announcement_score(
         decay = _decay(age)
         if decay == 0.0:
             continue
-        qualitative_bonus = _qualitative_announcement_bonus(
-            ann.interval_quality_label,
-            ann.materiality_label,
-        )
-        adjusted_base = clamp(ann.type_score + qualitative_bonus)
-        effective = adjusted_base * decay * (1.2 if ann.price_sensitive else 1.0)
+        # The quality and materiality labels describe how good a result was,
+        # and the resource sub-score already reads them — alongside trend,
+        # depth and percentile, which is the fuller reading. Scoring them here
+        # too made one document move two sub-scores, so this one answers only
+        # what happened, how recently, and whether the market was told it
+        # mattered. The labels are still reported, for the reader.
+        effective = ann.type_score * decay * (1.2 if ann.price_sensitive else 1.0)
         items.append(
             {
                 "ann_id": ann.ann_id,
@@ -152,8 +153,6 @@ def announcement_score(
                 "url": ann.url,
                 "ai_summary": ann.ai_summary,
                 "base": ann.type_score,
-                "qualitative_bonus": qualitative_bonus,
-                "adjusted_base": adjusted_base,
                 "age_days": age,
                 "decay": decay,
                 "price_sensitive": ann.price_sensitive,
@@ -172,33 +171,6 @@ def announcement_score(
     bonus = min(15, 5 * sum(1 for item in items[1:] if item["base"] >= 70))
     score = clamp(best + bonus)
     return score, {"announcements": items, "best": best, "bonus": bonus}
-
-
-def _qualitative_announcement_bonus(
-    interval_quality_label: str | None,
-    materiality_label: str | None,
-) -> float:
-    """Small auditable uplift for drill-result context quality/materiality.
-
-    The base announcement type remains the primary signal. Qualitative context
-    can only add a bounded bonus when comparable history exists; insufficient
-    history deliberately contributes no points.
-    """
-
-    quality_points = {
-        "exceptional": 6.0,
-        "strong": 4.0,
-        "moderate": 2.0,
-        "weak": 0.0,
-        "insufficient_history": 0.0,
-    }.get(interval_quality_label or "", 0.0)
-    materiality_points = {
-        "high": 4.0,
-        "medium": 2.0,
-        "low": 0.0,
-        "insufficient_history": 0.0,
-    }.get(materiality_label or "", 0.0)
-    return min(10.0, quality_points + materiality_points)
 
 
 # ---------- Commodity Score (0-100) ----------
