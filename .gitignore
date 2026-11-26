@@ -12,6 +12,8 @@ data/*.db-shm
 data/*.db-wal
 data/yfinance_cache/
 data/evidence/
+# downloaded announcement PDFs waiting to be imported — source documents, not source code
+data/inbox/
 data/*.xlsx
 .env
 .DS_Store

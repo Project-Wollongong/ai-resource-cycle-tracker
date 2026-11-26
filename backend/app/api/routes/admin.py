@@ -19,8 +19,7 @@ from ...services.stock_identity import normalize
 from ...services.backfill_service import create_backfill_run, execute_backfill_run, preview_backfill, retry_failed
 from ...config import BASE_DIR, settings
 from ...services.config_service import get_all_config, set_config
-from ...services.evidence_storage import atomic_write_bytes, evidence_dir, sha256_file, write_metadata
-from ...services.evidence_text_extractor import extract_pdf_text
+from ...services.historical_evidence_import import import_historical_evidence, validate_historical_pdf
 from ...datasources.asx_announcements import AsxJsonAnnouncementSource
 from ...datasources.base import SourceBlockedError
 from ..deps import get_db
@@ -823,23 +822,13 @@ def _p3_fact(fact_id: int, db: Session) -> P3Fact:
 def import_historical_baseline(payload: HistoricalBaselineCreate, db: Session = Depends(get_db)):
     stock = db.get(Stock, payload.stock_id)
     if stock is None: raise HTTPException(status_code=404, detail="stock not found")
-    source = Path(payload.local_pdf_path).resolve()
-    if source.suffix.lower() != ".pdf" or not source.is_file() or source.stat().st_size > 50 * 1024 * 1024:
-        raise HTTPException(status_code=422, detail="local_pdf_path must be an existing PDF under 50MB")
-    repo_root = BASE_DIR.resolve()
-    try: source.relative_to(repo_root)
-    except ValueError: raise HTTPException(status_code=422, detail="local_pdf_path must be inside the project data/docs directory")
-    source_id = f"historical-{uuid4().hex}"
-    directory = evidence_dir(stock.code, source_id)
-    original = directory / "original.pdf"
-    atomic_write_bytes(original, source.read_bytes())
-    digest = sha256_file(original)
-    text_path = directory / "raw_text.txt"
     try:
-        text, pages = extract_pdf_text(original)
-        atomic_write_bytes(text_path, text.encode("utf-8")); text_status = "extracted"; evidence_status = "text_ready"; error = None
-    except Exception as exc:
-        pages = None; text_status = "failed"; evidence_status = "file_saved"; error = str(exc)
-    evidence = EvidenceDocument(stock_id=stock.id, project_id=payload.project_id, source_type="historical_baseline", source_id=source_id, title=payload.title, document_date=payload.source_date, url=payload.source_url, source_url=payload.source_url, local_original_path=str(original), raw_storage_path=str(original), local_raw_text_path=str(text_path) if text_status == "extracted" else None, raw_text_path=str(text_path) if text_status == "extracted" else None, file_hash_sha256=digest, content_hash=digest, file_size_bytes=original.stat().st_size, content_type="application/pdf", downloaded_at=datetime.utcnow(), text_extracted_at=datetime.utcnow() if text_status == "extracted" else None, evidence_status=evidence_status, download_status="downloaded", text_status=text_status, error_message=error, historical_baseline=True, review_status=payload.review_status, imported_at=datetime.utcnow(), metadata_json="{}")
-    db.add(evidence); db.flush(); write_metadata(directory, {"source_type": "historical_baseline", "announcement_id": None, "ticker": stock.code, "title": payload.title, "source_url": payload.source_url, "local_original_path": str(original.relative_to(Path(settings.evidence_root))), "local_raw_text_path": str(text_path.relative_to(Path(settings.evidence_root))) if text_status == "extracted" else None, "sha256": digest, "page_count": pages, "historical_baseline": True, "review_status": payload.review_status})
+        source = validate_historical_pdf(Path(payload.local_pdf_path))
+        evidence, _ = import_historical_evidence(
+            db, stock=stock, local_pdf_path=source, title=payload.title,
+            source_date=payload.source_date, source_url=payload.source_url,
+            project_id=payload.project_id, review_status=payload.review_status,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     db.commit(); db.refresh(evidence); return evidence

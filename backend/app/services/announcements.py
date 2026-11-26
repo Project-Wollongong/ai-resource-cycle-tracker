@@ -2,6 +2,7 @@
 
 import json
 import logging
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,38 @@ from .p3_parse_service import PARSER_VERSION, parse_evidence
 logger = logging.getLogger(__name__)
 
 _REVISION_TERMS = ("revised", "revision", "correction", "replacement", "replace", "withdrawal", "withdrawn", "amended")
+
+
+def _normalise_announcement_datetime(value: datetime) -> datetime:
+    if value.tzinfo is not None:
+        return value.astimezone(market_tz()).replace(tzinfo=None)
+    return value
+
+
+def _detect_announcement_gap(session: Session, stock: Stock, source: AnnouncementSource, raws: list) -> dict | None:
+    """Detect an unseen interval when a recent-only source is visibly capped."""
+    limit = getattr(source, "recent_announcement_limit", None)
+    if not limit or len(raws) < limit:
+        return None
+    latest_existing = (
+        session.query(Announcement.ann_date)
+        .filter(Announcement.stock_id == stock.id)
+        .order_by(Announcement.ann_date.desc())
+        .first()
+    )
+    if latest_existing is None:
+        return None
+    source_oldest = min(_normalise_announcement_datetime(raw.ann_date) for raw in raws)
+    database_latest = latest_existing[0]
+    if source_oldest.date() <= database_latest.date():
+        return None
+    days = (source_oldest.date() - database_latest.date()).days
+    return {
+        "stock_code": stock.code,
+        "database_latest_date": database_latest.date().isoformat(),
+        "source_oldest_date": source_oldest.date().isoformat(),
+        "gap_days": days,
+    }
 
 
 def _candidate_version_relation(session: Session, announcement: Announcement, stock: Stock) -> None:
@@ -55,6 +88,13 @@ def sync_announcements(
     """Returns {"new": n}. SourceBlockedError is NOT caught here — the pipeline
     handles degradation so it can mark the whole run, not just one stock."""
     raws = source.fetch(stock.code, count)
+    # Gap detection is advisory. An unexpected source payload must never stop
+    # price, scoring, or evidence work later in the pipeline.
+    try:
+        announcement_gap = _detect_announcement_gap(session, stock, source, raws)
+    except Exception:
+        logger.exception("announcement gap detection failed for %s", stock.code)
+        announcement_gap = None
     new = 0
     evidence_downloaded = evidence_failed = text_extracted = text_failed = 0
     p3_parsed = p3_review_needed = p3_failed = p3_skipped = 0
@@ -68,11 +108,9 @@ def sync_announcements(
             continue
         classification = classify(raw.headline)
         family_classification = classify_families(raw.headline, raw.raw)
-        ann_date = raw.ann_date
-        if ann_date.tzinfo is not None:
-            # store naive local (Australia/Sydney) so "announcement day" aligns
-            # with ASX trading dates
-            ann_date = ann_date.astimezone(market_tz()).replace(tzinfo=None)
+        # Store naive local (Australia/Sydney) so "announcement day" aligns
+        # with ASX trading dates.
+        ann_date = _normalise_announcement_datetime(raw.ann_date)
         announcement = Announcement(
             stock_id=stock.id,
             ann_id=raw.ann_id,
@@ -139,5 +177,5 @@ def sync_announcements(
         new += 1
     session.commit()
     if include_evidence_stats:
-        return {"new": new, "evidence_downloaded": evidence_downloaded, "evidence_failed": evidence_failed, "text_extracted": text_extracted, "text_failed": text_failed, "p3_parsed": p3_parsed, "p3_review_needed": p3_review_needed, "p3_failed": p3_failed, "p3_skipped": p3_skipped, "parser_version": parser_version}
+        return {"new": new, "evidence_downloaded": evidence_downloaded, "evidence_failed": evidence_failed, "text_extracted": text_extracted, "text_failed": text_failed, "p3_parsed": p3_parsed, "p3_review_needed": p3_review_needed, "p3_failed": p3_failed, "p3_skipped": p3_skipped, "parser_version": parser_version, "announcement_gap": announcement_gap}
     return {"new": new}

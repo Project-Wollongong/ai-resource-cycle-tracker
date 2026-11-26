@@ -26,6 +26,10 @@ _DATE_FORMATS = (
     "%Y-%m-%d",
 )
 
+# Verified against the live gateway on 2026-11-25: requests for 200 items still
+# return five. This is a recent-announcements feed, not a historical archive.
+RECENT_ANNOUNCEMENT_LIMIT = 5
+
 
 def _parse_date(value: str | None) -> datetime | None:
     if not value:
@@ -51,6 +55,8 @@ class AsxJsonAnnouncementSource(AnnouncementSource):
     bot protection / token rotation → SourceBlockedError, pipeline degrades
     gracefully to stored announcements.
     """
+
+    recent_announcement_limit = RECENT_ANNOUNCEMENT_LIMIT
 
     def __init__(self, base_url: str | None = None, access_token: str | None = None,
                  timeout: float = 20.0):

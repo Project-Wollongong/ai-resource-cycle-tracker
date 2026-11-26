@@ -361,7 +361,7 @@ npm run build
 7. 规则全文分析只做窄范围抽取，不能替代地质、矿权、财务和估值尽调。
 8. `claude` 分析器只有在显式允许付费调用且配置 API key 时才会运行。
 9. Cycle Score 的 `announcement` 与 `resource` 两个子分读取同一批公告，存在同源重复计分（合计权重 0.60）。当前 `AI_ANALYZER=noop` 时 `resource` 恒为 50 不会显现，启用正文分析器后会生效，详见「信号与评分的去重 / 尚未处理」。
-10. P04 指标依赖对应的公告类型：没有 Appendix 5B 就没有现金跑道，没有融资公告就没有折价。ASX 接口每支股票仅返回最近 5 份文件，因此多数股票当前无 P04 数据；历史文档需经 `POST /api/admin/evidence/historical-baseline` 手工导入。
+10. P04 指标依赖对应的公告类型：没有 Appendix 5B 就没有现金跑道，没有融资公告就没有折价。ASX 接口每支股票仅返回最近 5 份文件，因此多数股票当前无 P04 数据；历史文档需经管理员接口或批量导入工具补全。
 11. 资源量交叉校验只覆盖 JORC 表中单位配对明确的行；ppm、lb、oz/t 等不作换算，相应行不产生校验结果，不代表数据已通过检查。
 
 ## Beta02 P01–P03 证据流水线
@@ -395,6 +395,24 @@ GET  /api/admin/backfill/runs/{run_id}/items
 POST /api/admin/backfill/runs/{run_id}/retry-failed
 POST /api/admin/backfill/runs/{run_id}/cancel
 ```
+
+### 公告缺口与历史 PDF 批量导入
+
+当前 ASX 元数据源是最近公告流。每次同步若恰好收到 5 条公告，系统会将最早一条的日期与数据库中该股票已有的最新公告日期比较；两者之间存在空档时，会在每日运行结果的 `announcement_gaps` 中记录股票代码、起止日期和缺口天数。它是数据完整性提示，不会阻断价格、评分或证据处理。
+
+ASX 历史公告应从合规的数据来源下载为原始 PDF，再放入 `data/inbox/`。文件名必须是 `CODE_YYYY-MM-DD_TYPE.pdf`，例如 `HAS_2026-06-30_5B.pdf`。先只检查：
+
+```bash
+backend/.venv/bin/python scripts/import_announcements.py --inbox data/inbox --dry-run
+```
+
+确认结果后执行导入：
+
+```bash
+backend/.venv/bin/python scripts/import_announcements.py --inbox data/inbox
+```
+
+工具会按 PDF 的 SHA-256 去重，保留原始文件和文本抽取结果，执行 P3 事实解析，并在全部文件处理完成后重算受影响股票的 P4 指标。文件名不合规、股票不在观察池或 PDF 损坏时，会单独报告并继续处理其余文件。
 
 普通股票详情页继续显示经批准的项目树、公告外链、本地 PDF、Evidence 状态、客观摘要、多个 Event、Facts、实体映射、页码/摘录和版本状态。Drill Context 仅在 F01 钻孔信息存在时显示；非钻探公告显示不适用或留空。
 

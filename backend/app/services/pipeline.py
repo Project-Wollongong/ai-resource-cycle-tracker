@@ -67,6 +67,7 @@ def _run_daily_pipeline_unlocked(trigger: str, retry_of_run_id: int | None = Non
             "p3_skipped": 0,
             "p4_features_computed": 0,
             "p4_features_skipped": 0,
+            "announcement_gaps": [],
             "blocked_sources": [],
             "scored": 0,
             "signals_added": 0,
@@ -132,6 +133,12 @@ def _run_daily_pipeline_unlocked(trigger: str, retry_of_run_id: int | None = Non
                     stats["p3_review_needed"] += result.get("p3_review_needed", 0)
                     stats["p3_failed"] += result.get("p3_failed", 0)
                     stats["p3_skipped"] += result.get("p3_skipped", 0)
+                    if gap := result.get("announcement_gap"):
+                        stats["announcement_gaps"].append(gap)
+                        logger.warning(
+                            "%s: announcements may be missing from %s to %s (%s days)",
+                            gap["stock_code"], gap["database_latest_date"], gap["source_oldest_date"], gap["gap_days"],
+                        )
                     item.status = "success" if result.get("new", 0) else "skipped"
                     item.metadata_json = json.dumps(result, ensure_ascii=False, default=str)
                 except SourceBlockedError as exc:
