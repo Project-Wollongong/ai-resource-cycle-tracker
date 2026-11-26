@@ -1023,6 +1023,35 @@ class AnalyticalSignal(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class ForwardCatalystMap(Base):
+    """The Catalyst Agent's running view of where a project stands and what is
+    next. P05 calls this persistent internal state, not a third output, so it
+    is append-only per day and keeps its own history rather than being
+    overwritten — the change between two days is the finding.
+
+    `probability` stays qualitative. The PRD forbids a milestone probability
+    model in the pilot and forbids inventing one where evidence is absent.
+    """
+
+    __tablename__ = "forward_catalyst_maps"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), index=True)
+    as_of_date: Mapped[date] = mapped_column(Date, index=True)
+    current_stage: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    previous_stage: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    next_expected_event: Mapped[str | None] = mapped_column(Text, nullable=True)
+    expected_window: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    importance: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    probability: Mapped[str] = mapped_column(String(30), default="not_assessed")
+    dependencies_json: Mapped[str] = mapped_column(Text, default="[]")
+    bottlenecks_json: Mapped[str] = mapped_column(Text, default="[]")
+    evidence_basis_json: Mapped[str] = mapped_column(Text, default="[]")
+    change_since_previous: Mapped[str | None] = mapped_column(Text, nullable=True)
+    logic_version: Mapped[str] = mapped_column(String(80), default="manual_v1")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class FusionRecord(Base):
     __tablename__ = "fusion_records"
 

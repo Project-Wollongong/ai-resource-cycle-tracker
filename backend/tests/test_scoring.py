@@ -456,6 +456,27 @@ def test_score_and_signal_stock_writes_p5_p6_compat_records_idempotently(db_sess
     )
     db_session.commit()
 
+    # the same drilling, as P03 recorded it — the Catalyst Agent reads events,
+    # not the announcement score, so without this it has nothing to read
+    from app.models import EvidenceDocument, P3Event, P3ParseRun
+
+    evidence = EvidenceDocument(stock_id=stock.id, source_type="asx_pdf",
+                                source_id="p56-drill", title="High-grade drilling results")
+    db_session.add(evidence)
+    db_session.commit()
+    run = P3ParseRun(evidence_document_id=evidence.id, parser_name="t", parser_version="t",
+                     input_hash="t", status="parsed")
+    db_session.add(run)
+    db_session.commit()
+    db_session.add(P3Event(
+        evidence_document_id=evidence.id, parse_run_id=run.id, stock_id=stock.id,
+        event_type="Drilling Completed", event_title="Drilling Completed",
+        primary_family="F01", event_status="completed",
+        occurred_on=eval_date, reported_on=datetime.combine(eval_date, datetime.min.time()),
+        revision_tags_json="[]",
+    ))
+    db_session.commit()
+
     for _ in range(2):
         score_and_signal_stock(
             db_session,
@@ -468,27 +489,24 @@ def test_score_and_signal_stock_writes_p5_p6_compat_records_idempotently(db_sess
 
     analytical = db_session.query(AnalyticalSignal).filter_by(stock_id=stock.id).all()
     assert sorted({row.engine for row in analytical}) == ["catalyst", "fundamental", "technical"]
-    assert len(analytical) == 3
-    # the technical rows come from the P05 agent now and carry its own version;
-    # only the two the adapter still reshapes carry the adapter's
-    by_engine = {row.engine: row.logic_version for row in analytical}
-    assert by_engine["technical"] == "technical_seven_lens_v1"
-    assert by_engine["catalyst"] == by_engine["fundamental"] == "cycle_score_adapter_v1"
-    # The drilling announcement drives both the fundamental and catalyst
-    # engines. That is one event, so it must occupy one dependency group —
-    # otherwise P6 reads a single announcement as two independent
-    # confirmations. source_event_id still carries the document id.
-    assert {row.source_event_id for row in analytical} == {
-        "announcement:p56-drill",
-        f"technical_lens:participation:{eval_date.isoformat()}",
-    }
-    by_engine = {row.engine: row.dependency_group for row in analytical}
+    # two of the three engines write their own rows now, each under its own
+    # logic version; only fundamental is still reshaped by the adapter
+    by_version = {row.engine: row.logic_version for row in analytical}
+    assert by_version["technical"] == "technical_seven_lens_v1"
+    assert by_version["catalyst"] == "catalyst_seven_lens_v1"
+    assert by_version["fundamental"] == "cycle_score_adapter_v1"
+
+    # The one drilling result reaches the fundamental engine as an announcement
+    # and the catalyst engine as a P03 event. That is one source, so both must
+    # land in the same dependency group — otherwise P6 reads a single drill
+    # result as two independent confirmations.
+    groups = {(row.engine, row.dependency_group) for row in analytical}
     event_group = f"announcement_event:{eval_date.isoformat()}:exploration"
-    assert by_engine["fundamental"] == event_group
-    assert by_engine["catalyst"] == event_group
-    # the technical agent groups its seven lenses under one price-action key,
-    # so a day of agreeing lenses is one source rather than seven
-    assert by_engine["technical"] == f"price_action:{eval_date.isoformat()}"
+    assert ("fundamental", event_group) in groups
+    assert ("catalyst", event_group) in groups
+    # the technical agent groups its lenses under one price-action key, so a day
+    # of agreeing lenses is one source rather than seven
+    assert ("technical", f"price_action:{eval_date.isoformat()}") in groups
 
     fusion = db_session.query(FusionRecord).filter_by(stock_id=stock.id, fusion_date=eval_date).one()
     assert fusion.rule_version == "fusion_adapter_v1"

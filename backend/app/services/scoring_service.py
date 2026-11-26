@@ -26,6 +26,7 @@ from ..analysis.signals import (
 from ..models import Announcement, CommodityBar, PriceBar, ScoreSnapshot, Signal, Stock
 from .signal_service import persist_signals
 from .p5_p6_adapter import write_p5_p6_compat_records
+from .p5_catalyst_agent import analyse as run_catalyst_agent
 from .p5_technical_agent import analyse as run_technical_agent
 
 ANNOUNCEMENT_LOOKBACK_DAYS = 30
@@ -239,7 +240,12 @@ def score_and_signal_stock(
     # other engine, which is the whole reason a later agreement between engines
     # means something.
     technical_ids = [row.id for row in run_technical_agent(session, stock.id, bars)]
-    write_p5_p6_compat_records(session, stock, snapshot, day_signals, technical_ids)
+    # The Catalyst Agent reads P03 project events and is given no sight of
+    # price, of this snapshot, or of the technical reading above.
+    catalyst_ids = [row.id for row in run_catalyst_agent(session, stock.id, eval_date)]
+    write_p5_p6_compat_records(
+        session, stock, snapshot, day_signals, technical_ids + catalyst_ids
+    )
     return {
         "signals": added,
         "eval_date": eval_date.isoformat(),

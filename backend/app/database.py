@@ -132,6 +132,7 @@ def _apply_lightweight_migrations() -> None:
         HistoricalAnalysisReturn.__table__.create(bind=conn, checkfirst=True)
         from .models import (
             AnalyticalSignal,
+            ForwardCatalystMap,
             AssetUnit,
             AssetUnitIdentity,
             AssetUnitProposal,

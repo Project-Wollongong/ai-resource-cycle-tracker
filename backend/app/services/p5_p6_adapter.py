@@ -57,29 +57,10 @@ def write_p5_p6_compat_records(
             ).id
         )
 
-    announcement = components.get("announcement") if isinstance(components.get("announcement"), dict) else {}
-    if snapshot.announcement_score > 0:
-        source_event_id = _source_event_from_announcement(announcement, snapshot.date)
-        announcement_group = _dependency_group_from_announcement(session, announcement, snapshot.date)
-        analytical_ids.append(
-            _upsert_analytical_signal(
-                session,
-                stock_id=stock.id,
-                signal_date=snapshot.date,
-                engine="catalyst",
-                direction="positive",
-                magnitude=snapshot.announcement_score,
-                confidence=0.7,
-                persistence="short",
-                source_event_id=source_event_id,
-                dependency_group=announcement_group,
-                evidence_ids=_announcement_evidence_ids(announcement),
-                feature_ids=[],
-                key_drivers=_announcement_drivers(announcement),
-                key_risks=[],
-                metadata={"score": snapshot.announcement_score, "component": announcement},
-            ).id
-        )
+    # The catalyst engine used to be the announcement sub-score wearing a P5
+    # label. An announcement score is not a reading of project progress, which
+    # is what P05 asks the Catalyst Agent for, so that engine is now its own
+    # and writes its own rows; nothing is projected here.
 
     risk = components.get("risk") if isinstance(components.get("risk"), dict) else {}
     blocking_conditions = _blocking_conditions(snapshot.risk_score, risk)

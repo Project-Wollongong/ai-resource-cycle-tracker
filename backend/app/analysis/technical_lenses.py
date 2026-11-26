@@ -12,31 +12,16 @@ of nothing" are different findings and only one of them is worth reporting.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from statistics import mean
 from typing import Sequence
 
 from .indicators import DailyBar
-
-REPORTED = "reported"
-NO_MATERIAL_CHANGE = "no_material_change"
-INSUFFICIENT_DATA = "insufficient_data"
-
-
-@dataclass(frozen=True)
-class LensReading:
-    """One lens's finding. `status` separates silence from absence."""
-
-    lens: str
-    status: str
-    direction: str = "neutral"          # positive / negative / neutral
-    magnitude: str = "minor"            # minor / moderate / strong / exceptional
-    confidence: str = "medium"          # low / medium / high
-    persistence: str = "short"          # short / medium / long / structural
-    summary: str = ""
-    drivers: tuple[str, ...] = ()
-    risks: tuple[str, ...] = ()
-    evidence: dict = field(default_factory=dict)
+from .lens_reading import (
+    INSUFFICIENT_DATA,
+    NO_MATERIAL_CHANGE,
+    REPORTED,
+    LensReading,
+)
 
 
 def _need(bars: Sequence[DailyBar], count: int, lens: str) -> LensReading | None:

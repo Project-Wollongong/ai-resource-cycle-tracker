@@ -244,9 +244,16 @@ def test_the_technical_lenses_cannot_reach_another_engine():
                       "fusion", "scoring", "sqlalchemy", "models", "database"):
         offenders = [name for name in imported if forbidden in name.lower()]
         assert not offenders, f"technical lenses must not import {offenders}"
-    # price in, nothing else: the only project module it may reach is indicators
-    project = {name for name in imported if name.startswith(".") or "indicators" in name}
-    assert project <= {".indicators", ".indicators.DailyBar"}
+    # price in, nothing else. lens_reading is the shape every engine returns and
+    # deliberately belongs to none of them — sharing it through one engine would
+    # put a hole in the graph this test exists to protect.
+    project = {name for name in imported if name.startswith(".")}
+    assert project <= {
+        ".indicators", ".indicators.DailyBar",
+        ".lens_reading", ".lens_reading.LensReading",
+        ".lens_reading.REPORTED", ".lens_reading.NO_MATERIAL_CHANGE",
+        ".lens_reading.INSUFFICIENT_DATA",
+    }
 
 
 def _imported_modules(relative_path: str) -> set[str]:

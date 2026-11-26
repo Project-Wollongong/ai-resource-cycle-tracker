@@ -224,9 +224,17 @@ role      = primary | secondary
 
 **事件族划分偏粗。** 同一天的两份互不相关的钻探公告会被归入同一事件族，因而被当作一份证据。这是刻意选择的保守方向——宁可低估共振，也不要制造虚假共振。待 P03 把事件类型抽取稳定后，可以改为按真实事件聚合。
 
-## P05 Technical Analysis Agent
+## P05 分析 Agent
 
-P05 要的是三个**互相独立**的分析 Agent。目前只有 Technical 是真的——它自己读价格历史，而不是把 Cycle Score 换个形状。Fundamental 与 Catalyst 仍由 `p5_p6_adapter` 投影，待后续替换。
+P05 要的是三个**互相独立**的分析 Agent。Technical 与 Catalyst 已经是真的——各自读自己的数据、各有七个专业视角；Fundamental 仍由 `p5_p6_adapter` 投影 Cycle Score，待后续替换。
+
+| Agent | 读什么 | 禁止读什么 | 状态 |
+|---|---|---|---|
+| Technical | 日线价量 | 公告、评分、其他引擎 | ✅ 真 Agent |
+| Catalyst | P03 项目事件 | **价格、成交量、技术指标**、其他引擎 | ✅ 真 Agent |
+| Fundamental | —— | —— | ⚠️ 仍是投影 |
+
+### Technical Agent
 
 ### 七个视角
 
@@ -257,6 +265,43 @@ P05 要的是三个**互相独立**的分析 Agent。目前只有 Technical 是�
 ### 输出
 
 每条信号带 `narrative`（`analytical_signals.narrative`，本次新增的列），内容是七个视角的逐条读数加一句结论。当多空视角同时存在时，结论会明说"内部存在分歧，不宜当作单一方向的确认"，而不是只报多空计数。
+
+### Catalyst Agent
+
+读 P03 项目事件，判断项目走到哪、下一步等什么、卡在哪。七个视角：
+
+| 视角 | 判断什么 |
+|---|---|
+| `lifecycle` | 当前生命周期阶段，以及阶段是否推进 |
+| `milestone` | 里程碑完成，或已披露安排被撤回 |
+| `derisking` | 审批、合作、资金到位 |
+| `bottleneck` | 已到某阶段、但前置条件仍无证据 |
+| `timeline` | 公司修订了此前披露的计划 |
+| `forward` | 下一关键事件，以及已等待多久 |
+| `dependency` | 披露超过 180 天仍未见结论的事项 |
+
+阶段是**证据的排序，不是项目必须跑的跑道**。矿业公司常把钻探、冶金、审批并行推进，所以「阶段」取的是有证据支持的最远一点，而不是最新那条公告。
+
+### 三条写进代码的 PRD 约束
+
+**计划不等于完成。** 一笔 `proposed` 的配售不算去风险，只有 `funds_received` 或 `completed` 才算。前者报 `neutral` 并注明「到账前不构成去风险」。
+
+**沉默不是失败。** PRD 原文：「未收到公告不能自动判定为 Milestone Failure」。`forward` 视角在长期无公告时报的是「已等待 N 天」，方向 `neutral`、置信度 `low`，并写明「不能据此判定里程碑失败」。
+
+**不凭空生成概率。** Forward Catalyst Map 的 `probability` 恒为 `not_assessed`——PRD 明确不在 Pilot 建里程碑概率模型，也不许在证据不足时编一个数。
+
+### Forward Catalyst Map
+
+`forward_catalyst_maps` 表，按日追加而非覆盖——PRD 把它定义为**持续的内部分析状态，不是第三种正式输出**，两天之间的差异本身才是发现。记录当前阶段、下一关键事件、重要性、未解依赖、瓶颈、证据基础，以及与上次相比的变化。
+
+### 跨引擎的同源折扣
+
+Catalyst 的依赖组按**触发来源**决定，而不是一律按引擎：
+
+- 由单一公告族触发的视角（里程碑完成、审批到位、计划修订）→ `announcement_event:{日期}:{族}`，与 Fundamental 用的是同一个键
+- 读整段事件史得出的视角（阶段、瓶颈、等待、依赖）→ `project_progress:{日期}`
+
+这样一份钻探公告同时推动 Fundamental 与 Catalyst 时，P06 只记一份证据；而「项目卡在 FID 前」这种跨越整段历史的判断，才算独立的第三方意见。
 
 ## P04 衍生指标
 
