@@ -46,6 +46,30 @@ def test_official_quarterly_header_beats_generic_title_and_appendix_3y_is_non_co
     assert ("F06", "Proposed Issue of Securities") in {(event["primary_family"], event["event_type"]) for event in issue.events}
 
 
+@pytest.mark.parametrize("headline", [
+    "Quarterly Activities & Cash Flow Report - September 2026",   # AGY, no form number
+    "Quarterly Activities & Cashflow Report - March 2026",        # AGY, "Cashflow" as one word
+    "September 2026 Quarterly Report and Appendix 5B",            # ARU, month first
+    "Quarterly Activities Report - December 2025",                # narrative half of a split filing
+])
+def test_a_quarterly_routes_on_its_headline_not_only_the_form_number(headline):
+    """Section 8 is reached via this route, so a quarterly that misses it loses a
+    whole cash-runway reading with nothing on screen to say so. AGY's September
+    2026 filing went missing exactly this way."""
+    result = classify_families(headline)
+
+    assert result.document_category in {"Quarterly Report / Appendix 5B", "Quarterly Activities"}
+    assert result.families == ["F08"]
+
+
+def test_a_quarterly_index_rebalance_is_not_a_quarterly_report():
+    # "Quarterly" alone must not route: this one is S&P's, not the company's.
+    result = classify_families("S&P DJI Announces September 2026 Quarterly Rebalance")
+
+    assert result.document_category != "Quarterly Report / Appendix 5B"
+    assert result.families == []
+
+
 @pytest.mark.parametrize("title", ["Update", "Results", "Project", "Positive", "Significant", "Positive Significant Update Results for Project"])
 def test_generic_words_do_not_route_by_themselves(title):
     result = classify_families(title)

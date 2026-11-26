@@ -7,6 +7,11 @@ import re
 from typing import Any
 
 
+# The two categories the quarterly branch below can emit. Named here so the
+# parser can ask "is this a quarterly?" without restating the strings.
+QUARTERLY_CATEGORIES = frozenset({"Quarterly Report / Appendix 5B", "Quarterly Activities"})
+
+
 @dataclass(frozen=True)
 class DocumentRoute:
     document_category: str
@@ -30,7 +35,10 @@ def route_document(headline: str, raw_payload: str | dict[str, Any] | None = Non
 
     if standard_form == "Appendix 3Y" or re.search(r"director'?s interest notice|security holder details", searchable, re.I):
         return DocumentRoute("Appendix 3Y", header, subtype, standard_form or "Appendix 3Y", source, non_core_bucket="Ownership / Governance")
-    if standard_form in {"Appendix 5B", "Appendix 4C"} or re.search(r"quarterly activities|quarterly cash\s*flow", official_text, re.I):
+    # Headlines, not just official metadata: AGY files some quarters as a plain
+    # "Quarterly Activities & Cash Flow Report" with no form number anywhere in
+    # the title, and those quarters were routed as ordinary documents.
+    if standard_form in {"Appendix 5B", "Appendix 4C"} or re.search(r"quarterly (?:activities|cash\s*flow|report)", searchable, re.I):
         category = "Quarterly Report / Appendix 5B" if standard_form == "Appendix 5B" else "Quarterly Activities"
         return DocumentRoute(category, header, subtype, standard_form, source, default_family="F08")
     if re.search(r"annual report|half[- ]year|financial report|full year", official_text, re.I):

@@ -10,6 +10,7 @@ from pypdf import PdfReader
 
 from ..models import Announcement, AssetUnitIdentity, EvidenceDocument, P3Event, P3Fact, P3InformationPoint, P3ParseRun, ProjectIdentity
 from .p3_classification_service import classify_announcement
+from .p3_document_router import QUARTERLY_CATEGORIES
 from .p3_fact_extractor import extract_and_persist_facts
 from .p3_information_point_service import build_information_points
 from .p3_section_detector import detect_sections
@@ -73,7 +74,11 @@ def parse_evidence(
         prelim = classify_announcement(headline, raw_payload, [], reported_on=evidence.document_date)
         if sections and (prelim.document.default_family in {"F02", "F06", "F07"} or set(prelim.families) & {"F02", "F06", "F07"}):
             event_inputs.append({"text": pages[0], "name": "body_fallback", "page": 1})
-        if prelim.document.standard_form in {"Appendix 5B", "Appendix 4C"}:
+        # A quarterly cash-flow report carries section 8 whether or not its
+        # headline spells out the form number, so the category opens the scan and
+        # the section-8 wording itself decides what is found: a document without
+        # it yields nothing, so scanning one costs only the pass.
+        if prelim.document.standard_form in {"Appendix 5B", "Appendix 4C"} or prelim.document.document_category in QUARTERLY_CATEGORIES:
             for page_number, page_text in enumerate(pages, 1):
                 if any(marker in page_text.casefold() for marker in ("cash and cash equivalents", "net cash from", "quarter ended", "exploration & evaluation")):
                     event_inputs.append({"text": page_text, "name": "standard_form", "page": page_number})
