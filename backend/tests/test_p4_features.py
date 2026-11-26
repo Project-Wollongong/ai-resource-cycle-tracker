@@ -122,6 +122,57 @@ def test_recompute_under_same_version_updates_in_place(db_session):
     ).count() == 1
 
 
+def test_a_cash_flow_positive_quarter_reports_the_inflow_not_a_runway(db_session):
+    """Item 8.3 as a positive number means the entity funded itself that
+    quarter, and ASX has it answer 8.7 "N/A" for exactly that reason. Dividing
+    anyway would turn the strongest funding state into a 112-quarter runway."""
+    stock, evidence_id = _stock(db_session, "SELF")
+    db_session.add_all([
+        _fact(stock.id, evidence_id, "total_relevant_outgoings", 454.0),
+        _fact(stock.id, evidence_id, "total_available_funding", 51180.0),
+    ])
+    db_session.commit()
+
+    result = compute_funding_features(db_session, stock.id)
+
+    assert result["self_funding"] is True
+    assert result["cash_runway_quarters"] is None
+    names = {row.feature_name for row in db_session.query(P4Feature).all()}
+    assert "net_operating_inflow" in names
+    assert "cash_runway_quarters" not in names
+
+
+def test_an_outflow_quarter_is_unaffected_by_the_inflow_branch(db_session):
+    stock, evidence_id = _stock(db_session, "OUT")
+    db_session.add_all([
+        _fact(stock.id, evidence_id, "total_relevant_outgoings", -1222.0),
+        _fact(stock.id, evidence_id, "total_available_funding", 3761.0),
+    ])
+    db_session.commit()
+
+    result = compute_funding_features(db_session, stock.id)
+
+    assert result["self_funding"] is False
+    assert result["cash_runway_quarters"] == 3.08
+
+
+def test_a_fact_with_no_quarter_is_reported_rather_than_dropped(db_session, caplog):
+    """CVV's 1.7-quarter reading — below the ASX disclosure threshold — was lost
+    because its filing worded the cover line differently, and nothing said so."""
+    stock, evidence_id = _stock(db_session, "UNDATED")
+    db_session.add_all([
+        _fact(stock.id, evidence_id, "total_relevant_outgoings", -5708.0, as_of=None),
+        _fact(stock.id, evidence_id, "total_available_funding", 9510.0, as_of=None),
+    ])
+    db_session.commit()
+
+    with caplog.at_level("WARNING"):
+        result = compute_funding_features(db_session, stock.id)
+
+    assert result["status"] == "insufficient_facts"
+    assert "no as_of_date" in caplog.text
+
+
 # --- dilution -------------------------------------------------------------
 
 from datetime import datetime  # noqa: E402

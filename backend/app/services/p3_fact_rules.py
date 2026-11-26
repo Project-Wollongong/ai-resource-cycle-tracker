@@ -132,11 +132,25 @@ def _f04(pages: list[str], sections: list[dict]) -> list[dict]:
 def _f08(pages: list[str], sections: list[dict]) -> list[dict]:
     out: list[dict] = []
     quarter_end: date | None = None
+    # The cover-line fallback below is only trustworthy inside an actual
+    # Appendix 5B; in a half-year account "period ended 30 June" names a
+    # six-month period, and treating it as a quarter would misdate everything
+    # read from it.
+    is_appendix_5b = any(re.search(r"Total relevant outgoings", page, re.I) for page in pages)
     period_start: date | None = None
     ytd_start: date | None = None
     ytd_months: int | None = None
     for page, text in enumerate(pages, 1):
         ended = re.search(r"Quarter ended[\s\S]{0,180}?(\d{1,2}\s+[A-Za-z]+\s+20\d{2})", text, re.I)
+        if ended is None and is_appendix_5b:
+            # Some filers title the cover page "FOR THE PERIOD ENDED 31 MARCH
+            # 2026" and the form's own "Quarter ended" box survives extraction
+            # only as "Q uarter ended ... 31 M arch 2026". The fallback is
+            # anchored to its own line so that "reporting period ended ..."
+            # inside a sentence cannot stand in for the quarter.
+            ended = re.search(
+                r"^[^\S\n]*for the (?:quarter|period) ended\s+(\d{1,2}\s+[A-Za-z]+\s+20\d{2})[^\S\n]*$",
+                text, re.I | re.M)
         if ended:
             quarter_end = explicit_date(ended.group(1))
             if quarter_end:
@@ -175,9 +189,19 @@ def _f08(pages: list[str], sections: list[dict]) -> list[dict]:
         # exploration entities. Items 8.3 and 8.6 are the two inputs P04 needs to
         # recompute runway; 8.7 is the entity's own stated figure, kept so the
         # derived value can be cross-checked against what the company published.
-        outgoings = re.search(r"8\.3\s+Total relevant outgoings[^\n]*?\(([\d,]+)\)", text, re.I)
+        # Parentheses are the form's sign: "(1,857)" is money going out, a bare
+        # "454" is a net cash *inflow* for the quarter — which ASX then tells
+        # the entity to follow by answering item 8.7 "N/A". Reading only the
+        # parenthesised form made a company that had turned cash-flow positive
+        # indistinguishable from one we held no figures for. The leading
+        # "(item 8.1 + item 8.2)" is skipped as a unit so its own digits can
+        # never be mistaken for the value.
+        outgoings = re.search(r"8\.3\s+Total relevant outgoings\s*\([^)]{0,40}\)\s*(\([\d,]+\)|[\d,]+)", text, re.I)
         if outgoings:
-            out.append(_candidate("F08", "total_relevant_outgoings", "Total Relevant Outgoings", f"({outgoings.group(1)})", page, text, outgoings.start(), outgoings.end(), sections, value_numeric=-number(outgoings.group(1)), unit_raw="$A\u2019000", currency_raw="$A", quantity_type="amount", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Periodic Cash Flow Update", metadata={"appendix_5b_item": "8.3", "period_basis": "current_quarter"}))
+            token = outgoings.group(1)
+            is_outflow = token.startswith("(")
+            magnitude = number(token.strip("()"))
+            out.append(_candidate("F08", "total_relevant_outgoings", "Total Relevant Outgoings", token, page, text, outgoings.start(), outgoings.end(), sections, value_numeric=-magnitude if is_outflow else magnitude, unit_raw="$A\u2019000", currency_raw="$A", quantity_type="amount", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Periodic Cash Flow Update", metadata={"appendix_5b_item": "8.3", "period_basis": "current_quarter", "cash_direction": "outflow" if is_outflow else "net_inflow"}))
         funding = re.search(r"8\.6\s+Total available funding[^\n]*?([\d,]+)\s*\n", text, re.I)
         if funding:
             out.append(_candidate("F08", "total_available_funding", "Total Available Funding", funding.group(1), page, text, funding.start(), funding.end(), sections, value_numeric=number(funding.group(1)), unit_raw="$A\u2019000", currency_raw="$A", quantity_type="amount", status="reported", period_start=period_start, period_end=quarter_end, as_of_date=quarter_end, event_type_hint="Period-end Cash Position", metadata={"appendix_5b_item": "8.6", "period_basis": "period_end"}))

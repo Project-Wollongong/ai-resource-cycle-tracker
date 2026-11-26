@@ -257,7 +257,13 @@ def _extract_source_batch(events: list, sources: list[dict], page_count: int) ->
 
 
 def _standard_form_sources(pages: list[str]) -> list[dict]:
-    markers = ("cash and cash equivalents", "net cash from", "quarter ended", "exploration & evaluation")
+    # "for the period ended" picks up the cover page, which is where some
+    # filers state the quarter being reported. Without it the only statement of
+    # the period is the form's own "Quarter ended" box, and when extraction
+    # breaks that into "Q uarter ended" the whole filing lands undated — which
+    # is how CVV's March 2026 runway went missing.
+    markers = ("cash and cash equivalents", "net cash from", "quarter ended",
+               "exploration & evaluation", "for the period ended")
     return [
         {"name": "standard_form", "page": page, "text": text, "source_unit": f"standard_form:p{page}"}
         for page, text in enumerate(pages, 1)

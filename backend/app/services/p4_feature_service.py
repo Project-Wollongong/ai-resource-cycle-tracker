@@ -13,11 +13,14 @@ at a discount when the money runs out.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import date
 
 from sqlalchemy.orm import Session
 
 from ..models import P3Fact, P3ParseRun, P4Feature
+
+logger = logging.getLogger(__name__)
 
 FORMULA_VERSION = "funding_runway_v1"
 FEATURE_GROUP = "funding"
@@ -116,7 +119,41 @@ def _facts_by_quarter(session: Session, stock_id: int, fact_type: str) -> dict:
         .all()
     )
     # a quarter re-filed under a corrected parse keeps the newest reading
+    undated = [row.id for row in rows if not row.as_of_date]
+    if undated:
+        # A figure that never reached a quarter is a reading lost, not a
+        # reading absent: CVV's March 2026 runway of 1.7 quarters — under the
+        # ASX disclosure threshold — vanished here without a trace because the
+        # filing worded its cover line differently.
+        logger.warning(
+            "p4: %s facts of type %s for stock %s carry no as_of_date and are "
+            "excluded from the quarterly series: ids=%s",
+            len(undated), fact_type, stock_id, undated,
+        )
     return {row.as_of_date: row for row in rows if row.as_of_date}
+
+
+def _funding_change(session: Session, stock_id: int, as_of, funding: float,
+                    previous_funding: float, funding_fact: P3Fact) -> int:
+    """Quarter-on-quarter move in available funding. Applies whether or not the
+    quarter had a runway, so a self-funding company's position is still tracked."""
+    change_pct = round((funding / previous_funding - 1) * 100, 1)
+    _upsert(
+        session,
+        stock_id=stock_id,
+        as_of_date=as_of,
+        feature_name="available_funding_change_pct",
+        value=change_pct,
+        unit="%",
+        input_refs=[funding_fact.id],
+        evidence={
+            "formula": "available_funding / previous_quarter_available_funding - 1",
+            "inputs": {"available_funding": funding, "previous_quarter": previous_funding},
+        },
+        metadata={"depleting": change_pct < 0},
+        evidence_document_id=funding_fact.evidence_document_id,
+    )
+    return 1
 
 
 def compute_funding_features(session: Session, stock_id: int) -> dict:
@@ -154,6 +191,54 @@ def compute_funding_features(session: Session, stock_id: int) -> dict:
             continue
         burn = abs(outgoings)
         if burn == 0:
+            continue
+
+        # Item 8.3 read as a positive number is the entity reporting a net cash
+        # *inflow* for the quarter — it funded itself. ASX then instructs it to
+        # answer item 8.7 "N/A", because "how many quarters of funding remain"
+        # has no answer for a company that is not consuming its funding.
+        # Dividing anyway would turn the best funding state into a spuriously
+        # enormous runway, so this writes what actually happened instead.
+        if outgoings > 0:
+            _upsert(
+                session,
+                stock_id=stock_id,
+                as_of_date=as_of,
+                feature_name="net_operating_inflow",
+                value=outgoings,
+                unit=outgoings_fact.unit,
+                input_refs=[outgoings_fact.id],
+                evidence={
+                    "formula": "total_relevant_outgoings (reported as a net inflow)",
+                    "inputs": {
+                        "total_relevant_outgoings": outgoings,
+                        "total_available_funding": funding,
+                    },
+                    "source_pages": {"total_relevant_outgoings": outgoings_fact.source_page},
+                    "entity_reported_quarters": None,
+                },
+                metadata={
+                    "appendix_5b_items": ["8.3"],
+                    "cash_direction": "net_inflow",
+                    "runway_not_applicable": True,
+                },
+                evidence_document_id=outgoings_fact.evidence_document_id,
+            )
+            written += 1
+            if previous_funding not in (None, 0):
+                written += _funding_change(
+                    session, stock_id, as_of, funding, previous_funding, funding_fact
+                )
+            previous_funding = funding
+            history.append({
+                "as_of_date": as_of,
+                "cash_runway_quarters": None,
+                "self_funding": True,
+                "net_operating_inflow": outgoings,
+                "available_funding": funding,
+                "entity_reported_quarters": None,
+                "variance_vs_entity_reported": None,
+            })
             continue
 
         reported = _numeric(reported_by_q.get(as_of))
@@ -216,32 +301,16 @@ def compute_funding_features(session: Session, stock_id: int) -> dict:
         # The comparison the architecture asks for and a single filing can
         # never supply: how much the funding position moved since last quarter.
         if previous_funding not in (None, 0):
-            change_pct = round((funding / previous_funding - 1) * 100, 1)
-            _upsert(
-                session,
-                stock_id=stock_id,
-                as_of_date=as_of,
-                feature_name="available_funding_change_pct",
-                value=change_pct,
-                unit="%",
-                input_refs=[funding_fact.id],
-                evidence={
-                    "formula": "available_funding / previous_quarter_available_funding - 1",
-                    "inputs": {
-                        "available_funding": funding,
-                        "previous_quarter": previous_funding,
-                    },
-                },
-                metadata={"depleting": change_pct < 0},
-                evidence_document_id=funding_fact.evidence_document_id,
+            written += _funding_change(
+                session, stock_id, as_of, funding, previous_funding, funding_fact
             )
-            written += 1
 
         previous_funding = funding
         history.append(
             {
                 "as_of_date": as_of,
                 "cash_runway_quarters": runway,
+                "self_funding": False,
                 "quarterly_burn": burn,
                 "available_funding": funding,
                 "entity_reported_quarters": reported,
@@ -262,8 +331,12 @@ def compute_funding_features(session: Session, stock_id: int) -> dict:
         # want "where does this stand now, and does it match what the company
         # said" should not have to walk the history to find out
         "as_of_date": latest["as_of_date"],
+        # self_funding says which of the two readings below is the real one:
+        # a None runway here means the company funded itself that quarter, not
+        # that the quarter failed to parse.
+        "self_funding": latest["self_funding"],
         "cash_runway_quarters": latest["cash_runway_quarters"],
-        "quarterly_burn": latest["quarterly_burn"],
+        "quarterly_burn": latest.get("quarterly_burn"),
         "entity_reported_quarters": latest["entity_reported_quarters"],
         "variance_vs_entity_reported": latest["variance_vs_entity_reported"],
         "history": history,

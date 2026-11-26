@@ -336,3 +336,58 @@ def test_parse_run_persists_summary_first_audit_and_bullet_lineage(db_session):
     payload = TestClient(app).get(f"/api/announcements/{ann.ann_id}/parse-status").json()
     assert payload["fact_extraction"]["summary_bullet_count"] == audit["summary_bullet_count"]
     assert payload["information_point_grouping"]["all_facts_preserved"] is True
+
+
+# --- Appendix 5B section 8: sign and period wording -------------------------
+
+from app.services.p3_fact_rules import extract_fact_candidates  # noqa: E402
+
+_SECTION_8 = """8.1 Net cash from operating activities (item 1.9) {flow}
+8.3 Total relevant outgoings (item 8.1 + item 8.2) {outgoings}
+8.4 Cash and cash equivalents at quarter end (item 4.6) {funding}
+8.6 Total available funding (item 8.4 + item 8.5) {funding}
+"""
+
+
+def _section_8(cover, outgoings, funding="51,180", flow="454"):
+    page = f"{cover}\n\n{_SECTION_8.format(outgoings=outgoings, funding=funding, flow=flow)}"
+    event = SimpleNamespace(primary_family="F08", active_result=True)
+    return {c["fact_type"]: c for c in extract_fact_candidates([event], [page], [])}
+
+
+def test_parenthesised_outgoings_stay_an_outflow():
+    facts = _section_8("Quarter ended 30 June 2026", "(1,857)")
+
+    assert facts["total_relevant_outgoings"]["value_numeric"] == -1857.0
+    assert facts["total_relevant_outgoings"]["metadata"]["cash_direction"] == "outflow"
+
+
+def test_bare_outgoings_are_a_net_inflow_not_a_missing_figure():
+    """MEK reported 454 — no brackets — for five consecutive quarters after it
+    began producing. Requiring the brackets dropped all five."""
+    facts = _section_8("Quarter ended 30 September 2026", "454")
+
+    assert facts["total_relevant_outgoings"]["value_numeric"] == 454.0
+    assert facts["total_relevant_outgoings"]["metadata"]["cash_direction"] == "net_inflow"
+
+
+def test_the_item_reference_digits_are_never_read_as_the_value():
+    # "(item 8.1 + item 8.2)" sits between the label and the figure
+    facts = _section_8("Quarter ended 30 June 2026", "(1,857)")
+
+    assert facts["total_relevant_outgoings"]["value_numeric"] not in (8.0, 8.1, 8.2)
+
+
+def test_a_cover_line_saying_period_ended_still_dates_the_quarter():
+    """CVV's March 2026 filing says "FOR THE PERIOD ENDED 31 MARCH 2026" and the
+    form's own header box survives extraction only as "Q uarter ended"."""
+    facts = _section_8("FOR THE PERIOD ENDED 31 MARCH 2026", "(5,708)")
+
+    assert facts["total_relevant_outgoings"]["as_of_date"] == datetime(2026, 3, 31).date()
+
+
+def test_period_ended_inside_a_sentence_does_not_date_a_quarter():
+    cover = "Results for the reporting period ended 30 June 2026 were released."
+    facts = _section_8(cover, "(5,708)")
+
+    assert facts["total_relevant_outgoings"]["as_of_date"] is None
