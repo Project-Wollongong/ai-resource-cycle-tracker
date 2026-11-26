@@ -297,7 +297,21 @@ def _resource_score_from_contexts(session: Session, stock: Stock, eval_date) -> 
             "note": "no_qualitative_context",
         }
 
-    ranked = sorted(items, key=lambda item: item["score"], reverse=True)[:RESOURCE_CONTEXT_MAX_ITEMS]
+    # One announcement, one vote. A filing lists as many intercepts as it likes
+    # — a quarterly report routinely carries ten — and ranking them individually
+    # let a single document fill every slot and carry the sub-score on its own.
+    # BRE scored 96.6 that way, off one quarterly counted four times. This is
+    # the same same-source double count the signal layer already collapses by
+    # event; here the document's best intercept stands for the document.
+    best_per_announcement: dict[str, dict] = {}
+    for item in items:
+        held = best_per_announcement.get(item["ann_id"])
+        if held is None or item["score"] > held["score"]:
+            best_per_announcement[item["ann_id"]] = item
+
+    ranked = sorted(
+        best_per_announcement.values(), key=lambda item: item["score"], reverse=True
+    )[:RESOURCE_CONTEXT_MAX_ITEMS]
     best = ranked[0]["score"]
     avg = sum(item["score"] for item in ranked) / len(ranked)
     value = round(0.7 * best + 0.3 * avg, 1)
@@ -306,6 +320,9 @@ def _resource_score_from_contexts(session: Session, stock: Stock, eval_date) -> 
         "source": "qualitative_context_auto",
         "lookback_days": RESOURCE_CONTEXT_LOOKBACK_DAYS,
         "context_count": len(items),
+        # how many distinct filings those contexts came from — the gap between
+        # this and context_count is how much of the evidence was the same source
+        "announcement_count": len(best_per_announcement),
         "used_count": len(ranked),
         "best_context_score": best,
         "avg_context_score": round(avg, 1),

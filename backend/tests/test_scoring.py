@@ -304,6 +304,49 @@ def test_one_announcement_moves_the_resource_score_only(db_session):
     assert components["resource"]["items"][0]["score"] == 83.0
 
 
+def test_one_filings_many_intercepts_count_as_one_piece_of_evidence(db_session):
+    """A quarterly report lists ten intercepts. Ranking them individually let a
+    single document fill all eight slots and carry the sub-score alone — BRE
+    scored 96.6 that way, off one filing counted four times."""
+    from app.services.scoring_service import _resource_score_from_contexts
+
+    stock = Stock(code="DUP", name="Duplicate Co", commodity="gold")
+    db_session.add(stock)
+    db_session.commit()
+
+    eval_date = date(2026, 10, 1)
+    contexts = [
+        {"interval_quality_label": "exceptional", "materiality_label": "low",
+         "grade_thickness": 90.0 + index, "depth_category": "shallow"}
+        for index in range(10)
+    ]
+    db_session.add(Announcement(
+        stock_id=stock.id, ann_id="one-filing", headline="Quarterly Activities Report",
+        ann_date=datetime(2026, 9, 30), ann_type="QUARTERLY", type_score=40,
+        matched_keywords="[]", raw_payload="{}",
+        ai_metrics=json.dumps({"qualitative_contexts": contexts}),
+    ))
+    db_session.add(Announcement(
+        stock_id=stock.id, ann_id="other-filing", headline="Drilling update",
+        ann_date=datetime(2026, 9, 20), ann_type="DRILL_RESULTS", type_score=70,
+        matched_keywords="[]", raw_payload="{}",
+        ai_metrics=json.dumps({"qualitative_contexts": [
+            {"interval_quality_label": "weak", "materiality_label": "low",
+             "grade_thickness": 3.0, "depth_category": "deep"}
+        ]}),
+    ))
+    db_session.commit()
+
+    _, components = _resource_score_from_contexts(db_session, stock, eval_date)
+
+    # eleven contexts, but only two filings behind them
+    assert components["context_count"] == 11
+    assert components["announcement_count"] == 2
+    assert components["used_count"] == 2
+    # the weak filing must still pull the average down; it cannot be crowded out
+    assert {item["ann_id"] for item in components["items"]} == {"one-filing", "other-filing"}
+
+
 def test_manual_resource_override_still_wins_over_qualitative_context(db_session):
     stock = Stock(code="TST", name="Test Resources", commodity="gold", resource_score_override=62.0)
     db_session.add(stock)

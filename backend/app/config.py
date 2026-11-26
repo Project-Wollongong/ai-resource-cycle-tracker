@@ -47,8 +47,12 @@ class Settings(BaseSettings):
 
     # AI analysis layer. Defaults are intentionally cost-safe: no paid model
     # request is made unless AI_ANALYZER=claude, ANTHROPIC_API_KEY is present,
-    # and AI_ANALYZER_ALLOW_PAID_CALLS=true.
-    ai_analyzer: str = "noop"
+    # and AI_ANALYZER_ALLOW_PAID_CALLS=true. rules_fulltext is the default
+    # because it costs nothing — it reads drill intercepts out of the stored
+    # text with regexes and ranks them against the company's own history — and
+    # leaving it off meant the resource sub-score sat at its neutral 50 for
+    # every stock, which reads as a measurement rather than as its absence.
+    ai_analyzer: str = "rules_fulltext"
     ai_analyzer_allow_paid_calls: bool = False
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-3-5-haiku-latest"

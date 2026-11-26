@@ -100,7 +100,7 @@ npm run dev
 | `ENABLE_SCHEDULER` | `true` 开启每日自动 pipeline；开发时建议关闭，避免 reload 双跑 |
 | `SCHEDULE_HOUR` / `SCHEDULE_MINUTE` | 默认 18:30 Australia/Sydney |
 | `ASX_ACCESS_TOKEN` | ASX 前端接口 token，失效时需要更新 |
-| `AI_ANALYZER` | `noop` / `rules_fulltext` / `claude` |
+| `AI_ANALYZER` | `noop` / `rules_fulltext` / `claude`。默认 `rules_fulltext`：纯正则抽取钻孔数据并与本公司历史比出分位，不发生任何 API 调用 |
 | `AI_ANALYZER_ALLOW_PAID_CALLS` / `ANTHROPIC_API_KEY` | 只有选择 `claude` 且显式允许付费调用时才会调用 Anthropic |
 | `ADMIN_API_TOKEN` | 前端设置页执行 pipeline、replay、配置编辑等管理操作所需 token |
 
@@ -191,6 +191,7 @@ Funding Score 仍会计算并展示，但它现在定位为独立的资金确认
 | 1 | 信号生成（`analysis/signals.py`） | 突破本身就要求放量（`breakout_rel_vol` 默认 1.5），所以创新高当天若放量达标，`BREAKOUT_*` 和 `REL_VOL_SPIKE` 会同时触发。两者机械耦合，不是两次独立观察 | 已处理 |
 | 2 | 回测统计（`services/backtest.py`） | 同一股票同一天的多个信号，入场价相同、前向收益完全相同。按信号条数统计会虚增样本量；按标签或分数段分组时，它们还会落进同一组被当成多个独立样本 | 已处理 |
 | 3 | P5/P6 证据独立性（`services/p5_p6_adapter.py`） | `dependency_group` 原先以单份公告 ID 为键。公司常为同一件事一次发好几份文件（年报 + Appendix 4G + MD&A；收购公告 + 投资者演示），会被判成多个独立来源 | 已处理 |
+| 5 | Resource 子分的同源上下文（`services/scoring_service.py`） | 一份公告按每条钻孔各产出一个 qualitative context，一份季报常有十条。排序取前 8 时，单份文件就能占满全部名额并独自决定该子分 | 已处理 |
 | 4 | Cycle Score 子分（`analysis/scoring.py`） | `announcement_score`（权重 0.40）与 `resource_score`（权重 0.20）都读 `ai_metrics` 里的 `interval_quality_label` 与 `materiality_label`。一份钻探公告的同一组标签会同时抬高两个子分 | 已处理 |
 
 ### 处理方式
@@ -212,6 +213,8 @@ role      = primary | secondary
 两者差距即重叠程度。以当前数据集为例，608 条信号实际只来自 495 个独立交易日。
 
 **P5/P6 层：按事件族归组。** `dependency_group` 改为 `announcement_event:{日期}:{事件族}`，公告类型映射到 administrative / commercial / development / exploration / financial / funding / other / ownership / resource（见 `ANN_TYPE_TO_EVENT_FAMILY`）。`source_event_id` 仍保留文档 ID，证据链可追溯。`_evidence_independence()` 统计的是不同 `dependency_group` 的数量，而非信号条数，因此同一事件衍生的多条信号只算一份证据。
+
+**Resource 子分：一份公告一票。** 排序前先按 `ann_id` 折叠，每份公告只保留得分最高的那条上下文。启用 `rules_fulltext` 后立刻看到后果：BRE 的 resource 被一份季报的四条钻孔顶到 96.6，折叠后为 93.1，背后是四份不同公告。`components.resource` 现在同时给出 `context_count`（原始上下文数）与 `announcement_count`（去重后的公告数），两者的差距就是同源程度。
 
 **Cycle Score 层：质量标签只归一侧。** 两个子分读的是同一组标签，但分工不同——`announcement_score` 回答「发生了什么、多新、是否价格敏感」，`resource_score` 回答「这个结果好不好」。质量与重要性描述的是内容本身，因此只留给 `resource_score`，它还会结合趋势、深度、分位数一起判断，读得更完整。
 
