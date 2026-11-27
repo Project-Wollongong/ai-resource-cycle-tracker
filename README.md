@@ -445,7 +445,22 @@ P10  复盘：收益 +7.69%，结果质量 profit，决策质量 supported
 
 五个复盘维度（论据、信号、决策、仓位管理、归因）全部产出。演练数据已清除，WC8 的覆盖已解除。
 
-已知缺口：复盘的 `state_transition_review` 里 `attention_state_ids` 与 `fusion_record_ids` 都是空的——P10 还没把结果回链到当初的状态与融合记录。
+### 复盘回链到当初的证据
+
+P10 的 `state_transition_review` 原先是空的，因为它从持仓事件里读这些 ID，而**建仓和离场这两类事件从来不写**——只有持仓期间的定期复查会写。一笔开仓就平、中间没有复查的交易，事后完全追溯不到任何证据。
+
+现在两端都记录当时的注意力状态与融合记录，复盘因此能回答它存在的那个问题：
+
+```
+进场: {"attention_state_level": "L4", "opportunity_strength": "weak", ...}
+离场: {"attention_state_level": "L4", "opportunity_strength": "weak", ...}
+持仓期间状态变化: false
+结论: Attention stayed at L4 throughout; the exit was not driven by a change of state.
+```
+
+这段演练输出里有个值得注意的对照：注意力状态是 L4（人工设定），而机会强度是 `weak`（引擎的判断）。**复盘如实记下了「人把一只引擎评为弱的股票提到了 Decision Ready」**——这正是事后该被看见的东西。
+
+没有任何状态可回链时，复盘明说「cannot be traced to the evidence behind it」，而不是留一个空列表让人以为证据没问题。
 
 ## P04 衍生指标
 

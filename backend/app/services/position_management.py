@@ -67,6 +67,10 @@ def open_position_from_execution(
         quantity_delta=quantity,
         reason="User-confirmed execution opened the position.",
         trade_decision=trade_decision,
+        evidence={
+            **_state_at(session, stock.id),
+            "trade_decision_id": trade_decision.id if trade_decision is not None else None,
+        },
     )
     session.commit()
     return position
@@ -153,9 +157,41 @@ def close_position(
         price=exit_price,
         quantity_delta=-position.quantity,
         reason=reason,
+        evidence={
+            **_state_at(session, stock.id),
+            "trade_decision_id": position.trade_decision_id,
+        },
     )
     session.commit()
     return position
+
+
+def _state_at(session: Session, stock_id: int) -> dict[str, Any]:
+    """The attention state and fusion record standing behind an event.
+
+    Entry and exit were the two events that never recorded them, which is why
+    P10 could not say which evidence led into a trade: the review reads these
+    ids off the position's events, and the only event type that wrote them was
+    the periodic review in between.
+    """
+    attention = (
+        session.query(AttentionState)
+        .filter_by(stock_id=stock_id, ended_at=None)
+        .order_by(AttentionState.effective_at.desc(), AttentionState.id.desc())
+        .first()
+    )
+    fusion = (
+        session.query(FusionRecord)
+        .filter_by(stock_id=stock_id)
+        .order_by(FusionRecord.fusion_date.desc(), FusionRecord.id.desc())
+        .first()
+    )
+    return {
+        "attention_state_id": attention.id if attention is not None else None,
+        "attention_state_level": attention.state_level if attention is not None else None,
+        "fusion_record_id": fusion.id if fusion is not None else None,
+        "opportunity_strength": fusion.opportunity_strength if fusion is not None else None,
+    }
 
 
 def _enforce_portfolio_guardrails(session: Session, stock: Stock, new_position_value: float) -> None:

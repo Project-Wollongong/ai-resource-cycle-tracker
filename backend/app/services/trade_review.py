@@ -151,14 +151,59 @@ def _outcome_attribution(position: Position, events: list[PositionEvent], return
 
 
 def _state_transition_review(events: list[PositionEvent]) -> dict[str, Any]:
-    evidence_refs = [_loads(event.evidence_json, {}) for event in events]
-    attention_ids = [item.get("attention_state_id") for item in evidence_refs if isinstance(item, dict) and item.get("attention_state_id")]
-    fusion_ids = [item.get("fusion_record_id") for item in evidence_refs if isinstance(item, dict) and item.get("fusion_record_id")]
+    """Which states the position passed through, and where it entered and left.
+
+    Collecting the ids is not enough on its own: "which evidence led me in, and
+    had it changed by the time I left" is the question a review exists to
+    answer, and that needs the two ends named, not a bag of references.
+    """
+    refs = [
+        (event, _loads(event.evidence_json, {}))
+        for event in events
+    ]
+    refs = [(event, data) for event, data in refs if isinstance(data, dict)]
+    attention_ids = [data["attention_state_id"] for _, data in refs if data.get("attention_state_id")]
+    fusion_ids = [data["fusion_record_id"] for _, data in refs if data.get("fusion_record_id")]
+
+    entry = next((data for event, data in refs if event.event_type == "initial_buy"), {})
+    exit_ = next((data for event, data in refs if event.event_type == "exit"), {})
+    levels = [data.get("attention_state_level") for _, data in refs if data.get("attention_state_level")]
+
+    moved = None
+    if entry.get("attention_state_level") and exit_.get("attention_state_level"):
+        moved = entry["attention_state_level"] != exit_["attention_state_level"]
+
     return {
         "attention_state_ids": attention_ids,
         "fusion_record_ids": fusion_ids,
-        "assessment": "State transition effectiveness requires comparison against future outcomes.",
+        "entry_state": {
+            "attention_state_id": entry.get("attention_state_id"),
+            "attention_state_level": entry.get("attention_state_level"),
+            "fusion_record_id": entry.get("fusion_record_id"),
+            "opportunity_strength": entry.get("opportunity_strength"),
+        },
+        "exit_state": {
+            "attention_state_id": exit_.get("attention_state_id"),
+            "attention_state_level": exit_.get("attention_state_level"),
+            "fusion_record_id": exit_.get("fusion_record_id"),
+            "opportunity_strength": exit_.get("opportunity_strength"),
+        },
+        "levels_held": levels,
+        "state_changed_during_hold": moved,
+        "assessment": _transition_assessment(entry, exit_, moved),
     }
+
+
+def _transition_assessment(entry: dict[str, Any], exit_: dict[str, Any], moved: bool | None) -> str:
+    if not entry.get("attention_state_id"):
+        return "No attention state was recorded at entry; this position cannot be traced to the evidence behind it."
+    if moved is None:
+        return "Only one end of the hold carries a state, so the two cannot be compared."
+    if moved:
+        return (f"Attention moved from {entry['attention_state_level']} to "
+                f"{exit_['attention_state_level']} during the hold.")
+    return (f"Attention stayed at {entry['attention_state_level']} throughout; "
+            "the exit was not driven by a change of state.")
 
 
 def _sync_learning_candidates(
