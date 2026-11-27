@@ -174,7 +174,7 @@ export default function Ranking() {
               showInfo={false}
               size="small"
               style={{ width: 80 }}
-              strokeColor={s.latest_score.cycle_score >= 75 ? "#cf1322" : s.latest_score.cycle_score >= 60 ? "#d48806" : "#1677ff"}
+              strokeColor={s.latest_score.cycle_score >= 75 ? "var(--gossan)" : s.latest_score.cycle_score >= 60 ? "var(--ochre)" : "var(--azurite)"}
             />
           </Space>
         ) : (
@@ -197,7 +197,7 @@ export default function Ranking() {
       render: (_, s) =>
         s.today_signals.length ? (
           <Tooltip title={s.today_signals.join(", ")}>
-            <Badge count={s.today_signals.length} color="#722ed1" />
+            <Badge count={s.today_signals.length} color="var(--azurite)" />
           </Tooltip>
         ) : null,
     },

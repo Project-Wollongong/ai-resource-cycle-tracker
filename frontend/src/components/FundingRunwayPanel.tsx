@@ -119,7 +119,7 @@ function PlacementDiscount({ feature }: { feature: P4Feature }) {
     <Descriptions size="small" column={1} bordered title="最近一次配售">
       <Descriptions.Item label="折价">
         <Space size={8}>
-          <Typography.Text strong style={{ color: deep ? "#cf1322" : "#d46b08" }}>
+          <Typography.Text strong style={{ color: deep ? "var(--gossan)" : "var(--ochre)" }}>
             {pct.toFixed(2)}%
           </Typography.Text>
           {deep && (

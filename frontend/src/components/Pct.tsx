@@ -8,7 +8,7 @@ export default function Pct({
   suffix?: string;
 }) {
   if (value === null || value === undefined) return <span style={{ color: "#999" }}>–</span>;
-  const color = value > 0 ? "#3f8600" : value < 0 ? "#cf1322" : "#666";
+  const color = value > 0 ? "var(--up)" : value < 0 ? "var(--down)" : "var(--ink-faint)";
   return (
     <span style={{ color }}>
       {value > 0 ? "+" : ""}

@@ -4,12 +4,15 @@ import ReactECharts from "echarts-for-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { api } from "../api/client";
+import { baseChartOption, chartPalette, useThemeMode } from "../chartTheme";
 import type { BacktestGroup, BacktestSummary } from "../api/types";
 import Pct from "../components/Pct";
 
 const HORIZONS = [5, 20, 60, 120];
 
 export default function Backtest() {
+  const c = chartPalette(useThemeMode());
+  const chart = baseChartOption(c);
   const [groupBy, setGroupBy] = useState("signal_type");
   const [source, setSource] = useState("all");
   const [horizon, setHorizon] = useState(20);
@@ -76,14 +79,17 @@ export default function Backtest() {
 
   const chartOption = summary && {
     animation: false,
-    tooltip: {},
+    backgroundColor: chart.backgroundColor,
+    textStyle: chart.textStyle,
+    tooltip: chart.tooltip,
     grid: { left: 50, right: 20, top: 30, bottom: 60 },
     xAxis: {
+      ...chart.axis,
       type: "category",
       data: summary.groups.map((g) => g.group),
-      axisLabel: { rotate: 20 },
+      axisLabel: { ...chart.axis.axisLabel, rotate: 20 },
     },
-    yAxis: { name: "avg %" },
+    yAxis: { ...chart.axis, name: "avg %", nameTextStyle: { color: c.inkFaint } },
     series: [
       {
         name: `+${horizon}d 平均收益`,
@@ -91,7 +97,7 @@ export default function Backtest() {
         data: summary.groups.map((g) => {
           const cell = g.cells.find((c) => c.horizon_days === horizon);
           const v = cell?.avg ?? 0;
-          return { value: v, itemStyle: { color: v >= 0 ? "#26a69a" : "#ef5350" } };
+          return { value: v, itemStyle: { color: v >= 0 ? c.up : c.down } };
         }),
       },
       {
@@ -101,10 +107,10 @@ export default function Backtest() {
           const cell = g.cells.find((c) => c.horizon_days === horizon);
           return cell?.avg_excess ?? 0;
         }),
-        itemStyle: { color: "#1677ff88" },
+        itemStyle: { color: `${c.azurite}88` },
       },
     ],
-    legend: { top: 0 },
+    legend: { ...chart.legend, top: 0 },
   };
 
   return (

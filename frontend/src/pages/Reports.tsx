@@ -80,7 +80,7 @@ export default function Reports() {
                 onClick={() => setSelected(r)}
                 style={{
                   cursor: "pointer",
-                  background: selected?.report_date === r.report_date ? "#e6f4ff" : undefined,
+                  background: selected?.report_date === r.report_date ? "var(--azurite-weak)" : undefined,
                 }}
               >
                 <Space>

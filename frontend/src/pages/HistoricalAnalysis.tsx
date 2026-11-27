@@ -24,17 +24,20 @@ import ReactECharts from "echarts-for-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { api } from "../api/client";
+import { baseChartOption, chartPalette, useThemeMode } from "../chartTheme";
 import type { HistoricalAnalysisReturn, HistoricalAnalysisSnapshot, StockWithScore } from "../api/types";
 import LabelTag from "../components/LabelTag";
 import Pct from "../components/Pct";
 
 const { Text } = Typography;
 
+// score bands follow the palette: gossan and ochre are the "worth noticing"
+// pair, azurite means actionable, and the faint ink says nothing stands out
 const SCORE_COLORS = {
-  high: "#b42318",
-  watch: "#b54708",
-  monitor: "#175cd3",
-  muted: "#667085",
+  high: "var(--gossan)",
+  watch: "var(--ochre)",
+  monitor: "var(--azurite)",
+  muted: "var(--ink-faint)",
 };
 
 function scoreColor(score: number) {
@@ -51,6 +54,8 @@ function returnStatusColor(status: HistoricalAnalysisReturn["status"]) {
 }
 
 export default function HistoricalAnalysis() {
+  const c = chartPalette(useThemeMode());
+  const chart = baseChartOption(c);
   const [form] = Form.useForm();
   const [stocks, setStocks] = useState<StockWithScore[]>([]);
   const [snapshots, setSnapshots] = useState<HistoricalAnalysisSnapshot[]>([]);
@@ -122,36 +127,39 @@ export default function HistoricalAnalysis() {
     if (!selected) return null;
     return {
       animation: false,
-      tooltip: { trigger: "axis" },
+      backgroundColor: chart.backgroundColor,
+      textStyle: chart.textStyle,
+      tooltip: { ...chart.tooltip, trigger: "axis" },
       grid: { left: 46, right: 22, top: 34, bottom: 34 },
-      legend: { top: 0 },
+      legend: { ...chart.legend, top: 0 },
       xAxis: {
+        ...chart.axis,
         type: "category",
         data: selected.returns.map((row) => `+${row.horizon_days}d`),
       },
-      yAxis: { type: "value", name: "%" },
+      yAxis: { ...chart.axis, type: "value", name: "%", nameTextStyle: { color: c.inkFaint } },
       series: [
         {
           name: "实际收益",
           type: "bar",
           data: selected.returns.map((row) => row.return_pct ?? 0),
           itemStyle: {
-            color: (params: { value: number }) => (params.value >= 0 ? "#12b76a" : "#f04438"),
+            color: (params: { value: number }) => (params.value >= 0 ? c.up : c.down),
           },
         },
         {
           name: "基准收益",
           type: "bar",
           data: selected.returns.map((row) => row.benchmark_return_pct ?? 0),
-          itemStyle: { color: "#475467" },
+          itemStyle: { color: c.inkFaint },
         },
         {
           name: "最大回撤",
           type: "line",
           data: selected.returns.map((row) => row.max_drawdown_pct ?? 0),
           smooth: true,
-          lineStyle: { color: "#b42318", width: 2 },
-          itemStyle: { color: "#b42318" },
+          lineStyle: { color: c.gossan, width: 2 },
+          itemStyle: { color: c.gossan },
         },
       ],
     };
@@ -334,7 +342,7 @@ function SnapshotDashboard({
             />
           </Col>
           <Col xs={12} md={6}>
-            <Statistic title="+20d 收益" value={ret20?.return_pct ?? undefined} precision={1} suffix="%" valueStyle={{ color: (ret20?.return_pct ?? 0) >= 0 ? "#12b76a" : "#f04438" }} />
+            <Statistic title="+20d 收益" value={ret20?.return_pct ?? undefined} precision={1} suffix="%" valueStyle={{ color: (ret20?.return_pct ?? 0) >= 0 ? "var(--up)" : "var(--down)" }} />
           </Col>
           <Col xs={12} md={6}>
             <Statistic title="最佳已验证收益" value={bestReturn ?? undefined} precision={1} suffix="%" />
@@ -413,7 +421,7 @@ function SubscoreGrid({ snapshot }: { snapshot: HistoricalAnalysisSnapshot }) {
     <Row gutter={[12, 12]}>
       {items.map(([name, score, label]) => (
         <Col xs={12} md={8} key={name}>
-          <div style={{ border: "1px solid #eaecf0", borderRadius: 6, padding: 10, minHeight: 86 }}>
+          <div style={{ border: "1px solid var(--line)", borderRadius: 6, padding: 10, minHeight: 86 }}>
             <Text type="secondary">{name}</Text>
             <div style={{ color: scoreColor(score), fontSize: 24, fontWeight: 700, lineHeight: "30px" }}>
               {score.toFixed(1)}
