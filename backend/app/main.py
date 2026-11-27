@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api.routes import (
     admin,
     announcements,
+    attention,
     backtest,
     config as config_routes,
     health,
@@ -54,6 +55,7 @@ app.add_middleware(
 for module in (
     health,
     stocks,
+    attention,
     signals,
     announcements,
     backtest,

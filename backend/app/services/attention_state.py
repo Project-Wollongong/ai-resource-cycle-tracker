@@ -44,7 +44,16 @@ def update_attention_state_from_fusion(
     current_level = current.state_level if current is not None else "L1"
 
     if current is not None and (current.manual_lock or current.manual_override):
-        _apply_evaluation(current, fusion, current.state_level, "hold")
+        # A held state keeps the person's reason. Re-running the engine's text
+        # over it erased why the state was set, leaving a level nobody could
+        # account for. What the engine would now say is recorded beside it,
+        # which is the useful comparison: "you pinned L4; it now reads L1".
+        would_be, _, _ = _raw_target_state(fusion)
+        current.fusion_record_id = fusion.id
+        metadata = _loads_metadata(current.metadata_json)
+        metadata["engine_would_be"] = would_be
+        metadata["engine_evaluated_at"] = datetime.utcnow()
+        current.metadata_json = json.dumps(metadata, default=str)
         session.commit()
         return current
 
@@ -86,6 +95,14 @@ def update_attention_state_from_fusion(
     session.add(attention)
     session.commit()
     return attention
+
+
+def _loads_metadata(raw: str | None) -> dict:
+    try:
+        value = json.loads(raw or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return value if isinstance(value, dict) else {}
 
 
 def _current_state(session: Session, stock_id: int) -> AttentionState | None:
