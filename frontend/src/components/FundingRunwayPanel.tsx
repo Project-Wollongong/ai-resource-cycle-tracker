@@ -7,17 +7,100 @@ import StatusPill from "./StatusPill";
 // Under two quarters the ASX makes the entity answer Appendix 5B item 8.8
 // ("how will you fund operations?"), which is also the level at which a
 // dilutive raise stops being a risk and becomes a near-certainty.
-const CRITICAL_QUARTERS = 2;
-const CAUTION_QUARTERS = 4;
-
-function runwayTone(quarters: number): { color: string; label: string } {
-  if (quarters < CRITICAL_QUARTERS) return { color: "#cf1322", label: "紧张" };
-  if (quarters < CAUTION_QUARTERS) return { color: "#d46b08", label: "需关注" };
-  return { color: "#389e0d", label: "宽裕" };
-}
+import {
+  CRITICAL_QUARTERS,
+  CAUTION_QUARTERS,
+  buildFundingSeries,
+  daysSince,
+  isStale,
+  latestPoint,
+  runwayTone,
+  type FundingPoint,
+} from "./fundingSeries";
 
 function find(features: P4Feature[], name: string) {
   return features.find((item) => item.feature_name === name);
+}
+
+/** The eight quarters behind the headline, oldest first. */
+function Trend({ series }: { series: FundingPoint[] }) {
+  if (series.length < 2) return null;
+  return (
+    <div>
+      <div className="micro" style={{ marginBottom: 6 }}>
+        按季度（共 {series.length} 期）
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 10px" }}>
+        {series.map((point) => {
+          const self = point.kind === "self_funding";
+          const tone = self ? "var(--up)" : runwayTone(point.value).token;
+          return (
+            <div
+              key={`${point.asOf}-${point.kind}`}
+              style={{
+                border: "1px solid var(--line)",
+                padding: "4px 8px",
+                minWidth: 92,
+                background: "var(--surface)",
+              }}
+            >
+              <div className="micro num">{point.asOf}</div>
+              <div className="num" style={{ color: tone, fontWeight: 600, fontSize: 13 }}>
+                {self ? "现金流为正" : `${point.value.toFixed(2)} 季`}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** What a company that funds itself looks like — it has no runway to report. */
+function SelfFunding({ point, series }: { point: FundingPoint; series: FundingPoint[] }) {
+  const quarters = series.filter((item) => item.kind === "self_funding").length;
+  return (
+    <Space direction="vertical" size={12} style={{ width: "100%" }}>
+      <Space size={32} wrap align="start">
+        <Space direction="vertical" size={4}>
+          <span className="micro">资金状态</span>
+          <Typography.Text strong style={{ color: "var(--up)", fontSize: 20 }}>
+            经营性现金流为正
+          </Typography.Text>
+        </Space>
+        <Statistic
+          title="当季净流入"
+          value={point.value}
+          precision={0}
+          suffix={point.feature.unit || ""}
+        />
+        <Statistic title="已连续" value={quarters} suffix="个季度" />
+      </Space>
+      <Alert
+        type="success"
+        showIcon
+        message="现金跑道对这家公司不适用"
+        description={
+          "Appendix 5B 第 8.3 项报的是净流入，ASX 据此要求第 8.7 项填 N/A——" +
+          "「还能撑几个季度」对一家自己造血的公司没有答案。"
+        }
+      />
+      <Trend series={series} />
+      <StaleNote asOf={point.asOf} />
+    </Space>
+  );
+}
+
+function StaleNote({ asOf }: { asOf: string }) {
+  if (!isStale(asOf)) return null;
+  return (
+    <Alert
+      type="warning"
+      showIcon
+      message={`资金数据已有 ${daysSince(asOf)} 天`}
+      description="最近一份 Appendix 5B 距今已超过一个季度加申报期，当前状况可能已经改变。"
+    />
+  );
 }
 
 // one reconciliation row per table row, so the names carry a classification and
@@ -105,18 +188,35 @@ function ResourceCheck({ feature, total, inconsistent }: { feature: P4Feature; t
 }
 
 export default function FundingRunwayPanel({ features }: { features: P4Feature[] }) {
-  const runway = find(features, "cash_runway_quarters");
+  // Both forms a quarter can take, in one series. Reading only the runway
+  // feature showed MEK's June 2025 figure as current for seventeen months
+  // after it turned cash-flow positive and stopped producing one.
+  const series = buildFundingSeries(features);
+  const latest = latestPoint(series);
+  const runway = latest?.kind === "runway" ? latest.feature : undefined;
   const burn = find(features, "quarterly_burn");
   const discount = find(features, "placement_discount_pct");
   const checks = resourceChecks(features);
   const resourceCheck = checks[0];
   const inconsistent = checks.filter((item) => item.metadata?.consistent === false).length;
 
+  if (latest?.kind === "self_funding") {
+    return (
+      <Space direction="vertical" size={12} style={{ width: "100%" }}>
+        <SelfFunding point={latest} series={series} />
+        {resourceCheck && (
+          <ResourceCheck feature={resourceCheck} total={checks.length} inconsistent={inconsistent} />
+        )}
+        {discount && <PlacementDiscount feature={discount} />}
+      </Space>
+    );
+  }
+
   if (!runway || runway.value === null) {
     // the dilution and resource groups are derived independently, so a stock
     // can have a placement or a reconciliation on record with no quarterly yet
     const missing = (
-      <NoData reason="需要一份 Appendix 5B 季度现金流报告。ASX 接口每支股票仅返回最近 5 份文件，该公司当前 5 份中不含季报。" />
+      <NoData reason="需要一份 Appendix 5B 季度现金流报告。该公司尚无已解析的季报——生产商通常不报 Appendix 5B，历史季报也可经批量导入补齐。" />
     );
     if (discount || resourceCheck) {
       return (
@@ -134,6 +234,7 @@ export default function FundingRunwayPanel({ features }: { features: P4Feature[]
 
   const quarters = runway.value;
   const tone = runwayTone(quarters);
+  const stale = isStale(runway.as_of_date ?? "");
   const months = Math.round(quarters * 3);
   const evidence = runway.evidence || {};
   const reported = evidence.entity_reported_quarters;
@@ -148,11 +249,11 @@ export default function FundingRunwayPanel({ features }: { features: P4Feature[]
     <Space direction="vertical" size={12} style={{ width: "100%" }}>
       <Space size={32} wrap align="start">
         <Statistic
-          title="现金跑道"
+          title={stale ? `现金跑道（${runway.as_of_date}）` : "现金跑道"}
           value={quarters}
           precision={2}
           suffix="季度"
-          valueStyle={{ color: tone.color }}
+          valueStyle={{ color: tone.token }}
         />
         <Statistic title="约合" value={months} suffix="个月" />
         {burn?.value != null && (
@@ -174,6 +275,8 @@ export default function FundingRunwayPanel({ features }: { features: P4Feature[]
         </Space>
       </Space>
 
+      <StaleNote asOf={runway.as_of_date ?? ""} />
+
       {runway.metadata?.below_asx_disclosure_threshold && (
         <Alert
           type="error"
@@ -191,6 +294,8 @@ export default function FundingRunwayPanel({ features }: { features: P4Feature[]
           description={`我们按第 8.6 / 8.3 项算得 ${quarters.toFixed(2)}，公司在第 8.7 项自报 ${reported?.toFixed(2)}。可能是解析有误或公司口径不同，建议核对原文。`}
         />
       )}
+
+      <Trend series={series} />
 
       <Descriptions size="small" column={1} bordered>
         <Descriptions.Item label="计算式">

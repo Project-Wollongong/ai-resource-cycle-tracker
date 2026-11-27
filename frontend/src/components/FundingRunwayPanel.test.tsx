@@ -141,3 +141,97 @@ describe("FundingRunwayPanel · 资源量交叉校验", () => {
     expect(container.textContent).toContain("资源量自洽");
   });
 });
+
+// --- a company that funds itself ------------------------------------------
+
+describe("FundingRunwayPanel · 经营现金流为正", () => {
+  function inflow(asOf: string, value: number): P4Feature {
+    return feature({
+      feature_name: "net_operating_inflow",
+      value,
+      unit: "$A'000",
+      as_of_date: asOf,
+      evidence: {},
+      metadata: { cash_direction: "net_inflow", runway_not_applicable: true },
+    });
+  }
+
+  // MEK's real shape: a runway until mid-2025, then five quarters of inflow
+  const mek = [
+    inflow("2026-09-30", 454),
+    inflow("2026-06-30", 6259),
+    inflow("2026-03-31", 29246),
+    inflow("2025-12-31", 22478),
+    inflow("2025-09-30", 45),
+    feature({ value: 75.1, as_of_date: "2025-06-30" }),
+  ];
+
+  it("does not present as current a runway the company stopped having", () => {
+    // Reading only cash_runway_quarters showed 75.10 as the headline for
+    // seventeen months after MEK turned cash-flow positive. A stale number
+    // presented as the present is worse than a blank.
+    render(<FundingRunwayPanel features={mek} />);
+
+    expect(screen.getByText("经营性现金流为正")).toBeInTheDocument();
+    expect(screen.queryByText("现金跑道")).not.toBeInTheDocument();
+  });
+
+  it("keeps the old runway visible as history, where it belongs", () => {
+    // The company did have 75.1 quarters in June 2025; dropping it would lose
+    // the transition, which is the interesting part.
+    const { container } = render(<FundingRunwayPanel features={mek} />);
+
+    expect(container.textContent).toContain("75.10");
+    expect(container.textContent).toContain("2025-06-30");
+  });
+
+  it("says why there is no runway rather than leaving a gap", () => {
+    render(<FundingRunwayPanel features={mek} />);
+
+    expect(screen.getByText("现金跑道对这家公司不适用")).toBeInTheDocument();
+    expect(screen.getByText(/第 8\.7 项填 N\/A/)).toBeInTheDocument();
+  });
+
+  it("counts how long it has been self-funding", () => {
+    const { container } = render(<FundingRunwayPanel features={mek} />);
+
+    expect(container.textContent).toContain("已连续");
+    expect(container.textContent).toContain("5");
+  });
+});
+
+describe("FundingRunwayPanel · 季度趋势", () => {
+  const quarters = [
+    feature({ value: 11.38, as_of_date: "2024-12-31" }),
+    feature({ value: 9.2, as_of_date: "2025-03-31" }),
+    feature({ value: 3.08, as_of_date: "2026-06-30" }),
+  ];
+
+  it("shows every quarter, not only the latest", () => {
+    const { container } = render(<FundingRunwayPanel features={quarters} />);
+
+    expect(container.textContent).toContain("共 3 期");
+    expect(container.textContent).toContain("2024-12-31");
+    expect(container.textContent).toContain("11.38");
+  });
+
+  it("renders no trend strip when there is only one quarter on file", () => {
+    const { container } = render(<FundingRunwayPanel features={[feature()]} />);
+
+    expect(container.textContent).not.toContain("按季度");
+  });
+});
+
+describe("FundingRunwayPanel · 数据陈旧", () => {
+  it("warns when the last filing is older than a quarter plus its filing window", () => {
+    render(<FundingRunwayPanel features={[feature({ as_of_date: "2020-06-30" })]} />);
+
+    expect(screen.getByText(/资金数据已有/)).toBeInTheDocument();
+  });
+
+  it("puts the date in the headline once the reading is stale", () => {
+    render(<FundingRunwayPanel features={[feature({ as_of_date: "2020-06-30" })]} />);
+
+    expect(screen.getByText("现金跑道（2020-06-30）")).toBeInTheDocument();
+  });
+});
