@@ -149,6 +149,24 @@ export default function EngineReadings({ data }: { data: Readings }) {
         />
       )}
 
+      {fusion.narrative && (
+        <details open style={{ border: "1px solid var(--line)", padding: "10px 14px",
+                               background: "var(--sunk)" }}>
+          <summary style={{ cursor: "pointer", fontWeight: 600 }}>综合研判</summary>
+          <pre
+            style={{
+              whiteSpace: "pre-wrap",
+              fontSize: 13,
+              color: "var(--ink-soft)",
+              margin: "10px 0 0",
+              fontFamily: "inherit",
+            }}
+          >
+            {fusion.narrative}
+          </pre>
+        </details>
+      )}
+
       {data.engines.map((engine) => (
         <div
           key={engine.engine}

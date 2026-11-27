@@ -13,6 +13,8 @@ import {
   SettingOutlined,
 } from "@ant-design/icons";
 import { Layout, Menu, Typography } from "antd";
+
+import ThemeSwitch from "./components/ThemeSwitch";
 import type { MenuProps } from "antd";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 
@@ -94,13 +96,13 @@ export function selectedNavKey(pathname: string): string {
   return NAV_KEYS.filter((key) => key !== "/").find((key) => pathname.startsWith(key)) ?? "/";
 }
 
-export default function App() {
+export default function App({ onThemeChange }: { onThemeChange?: (mode: import("./theme").ThemeMode) => void } = {}) {
   const location = useLocation();
   const selected = selectedNavKey(location.pathname);
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <Sider theme="light" width={200}>
+      <Sider width={200} style={{ background: "var(--sunk)" }}>
         <div style={{ padding: "18px 16px 8px" }}>
           <Typography.Title level={5} style={{ margin: 0 }}>
             Resource Cycle
@@ -110,6 +112,10 @@ export default function App() {
           </Typography.Text>
         </div>
         <Menu mode="inline" selectedKeys={[selected]} items={MENU} />
+        <div style={{ padding: "14px 16px" }}>
+          <div className="micro" style={{ marginBottom: 6 }}>外观</div>
+          <ThemeSwitch onChange={onThemeChange} />
+        </div>
       </Sider>
       <Layout>
         <Content style={{ padding: 20, background: "var(--ground)" }}>

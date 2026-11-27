@@ -1,3 +1,4 @@
+import { theme as antdTheme } from "antd";
 import type { ThemeConfig } from "antd";
 
 /**
@@ -34,6 +35,53 @@ export const palette = {
   absent: "#C2CBD1",
 } as const;
 
+/**
+ * The same palette after dark, with the same four jobs.
+ *
+ * Not an inversion: pure black gives the hues nowhere to sit, so the ground is
+ * a very dark slate from the same family as the light one. Every accent was
+ * re-picked rather than lightened, because the light hues fall under 4.5:1 on
+ * a dark ground. Measured against #161D24 and #0E1419, the lowest contrast
+ * here is 4.87:1 (inkFaint) and the rest clear 5:1, so every one of these
+ * carries body text at WCAG AA.
+ *
+ * The keys mirror the light palette exactly. A missing key would leave its
+ * custom property at the previous mode's value, which shows up as one stray
+ * light-mode colour rather than as an obvious failure.
+ */
+export const darkPalette: Record<keyof typeof palette, string> = {
+  ground: "#0E1419",
+  surface: "#161D24",
+  sunk: "#1E262E",
+  line: "#2C3640",
+  lineStrong: "#415059",
+
+  ink: "#E6ECF1",
+  inkSoft: "#A8B4BE",
+  inkFaint: "#7E8B95",
+
+  azurite: "#6FA8DC",
+  azuriteWeak: "#1B2D3F",
+
+  up: "#3FBF92",
+  down: "#F2727F",
+  ochre: "#D9A441",
+  gossan: "#D4784F",
+
+  measured: "#E6ECF1",
+  indicated: "#A8B4BE",
+  inferred: "#8A959E",
+  absent: "#3A454E",
+} as const;
+
+export type ThemeMode = "system" | "light" | "dark";
+
+/** What `system` currently resolves to. */
+export function resolveMode(mode: ThemeMode): "light" | "dark" {
+  if (mode !== "system") return mode;
+  return globalThis.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 /** CSS custom property name for each palette entry. */
 const CSS_VAR: Record<keyof typeof palette, string> = {
   ground: "--ground",
@@ -65,16 +113,43 @@ const CSS_VAR: Record<keyof typeof palette, string> = {
  * disagreeing about what the accent colour is. tokens.css still ships the same
  * values as literals so the first paint is correct before React mounts.
  */
-export function applyPaletteVars(root: HTMLElement = document.documentElement) {
+export function applyPaletteVars(
+  mode: ThemeMode = "light",
+  root: HTMLElement = document.documentElement,
+) {
+  const resolved = resolveMode(mode);
+  const active: Record<string, string> = resolved === "dark" ? darkPalette : palette;
   for (const [key, cssVar] of Object.entries(CSS_VAR)) {
-    root.style.setProperty(cssVar, palette[key as keyof typeof palette]);
+    root.style.setProperty(cssVar, active[key]);
   }
+  // stamped so a stylesheet can react too, and so the resolved mode is
+  // inspectable rather than inferred from a colour
+  root.dataset.theme = resolved;
+  root.style.colorScheme = resolved;
 }
 
 const FONT_SANS =
   'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
 
-export const azuriteTheme: ThemeConfig = {
+/**
+ * Build the AntD theme for one mode.
+ *
+ * AntD derives hovers, borders and disabled states from its own algorithm, so
+ * the dark palette has to reach it through that rather than through CSS alone
+ * — overriding the variables without switching the algorithm leaves every
+ * derived token computed against a white ground.
+ */
+export function buildTheme(mode: ThemeMode = "light"): ThemeConfig {
+  const resolved = resolveMode(mode);
+  const p = resolved === "dark" ? darkPalette : palette;
+  return {
+    algorithm: resolved === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+    ...tokensFor(p),
+  };
+}
+
+function tokensFor(palette: Record<keyof typeof import('./theme').palette, string>): ThemeConfig {
+  return {
   token: {
     colorPrimary: palette.azurite,
     colorInfo: palette.azurite,
@@ -155,3 +230,7 @@ export const azuriteTheme: ThemeConfig = {
     },
   },
 };
+}
+
+/** The light theme, kept under its original name for existing callers. */
+export const azuriteTheme: ThemeConfig = buildTheme("light");

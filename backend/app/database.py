@@ -124,6 +124,11 @@ def _apply_lightweight_migrations() -> None:
         }
         if signal_columns and "narrative" not in signal_columns:
             conn.exec_driver_sql("ALTER TABLE analytical_signals ADD COLUMN narrative TEXT")
+        fusion_columns = {
+            row[1] for row in conn.exec_driver_sql("PRAGMA table_info(fusion_records)")
+        }
+        if fusion_columns and "narrative" not in fusion_columns:
+            conn.exec_driver_sql("ALTER TABLE fusion_records ADD COLUMN narrative TEXT")
         from .models import HistoricalAnalysisSnapshot
 
         HistoricalAnalysisSnapshot.__table__.create(bind=conn, checkfirst=True)

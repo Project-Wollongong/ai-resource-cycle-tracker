@@ -9,6 +9,8 @@ export interface ScoreBrief {
   cycle_score: number;
   label: string;
   components?: Record<string, unknown> | null;
+  /** per sub-score `source`, so a defaulted 50 can be told from a measured one */
+  component_sources?: Record<string, string> | null;
 }
 
 export interface StockWithScore {
@@ -974,6 +976,7 @@ export interface EngineReadings {
     evidence_independence: string | null;
     conflicts: string[];
     blocking_conditions: string[];
+    narrative: string | null;
     strength_basis: {
       positive_sources: number;
       negative_sources: number;

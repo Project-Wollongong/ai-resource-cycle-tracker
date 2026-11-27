@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from ..models import AnalyticalSignal, Announcement, FusionRecord, ScoreSnapshot, Signal, Stock
 from .attention_state import update_attention_state_from_fusion
+from .p6_narrative import build_fusion_narrative
 from .trade_decision import write_trade_decision_from_state
 
 P5_LOGIC_VERSION = "cycle_score_adapter_v1"
@@ -68,6 +69,22 @@ def write_p5_p6_compat_records(
     conflicts = _conflicts(session, analytical_ids, snapshot, signals, strength_basis)
     official_result = "blocked" if blocking_conditions else opportunity_strength
 
+    signal_rows = (
+        session.query(AnalyticalSignal).filter(AnalyticalSignal.id.in_(analytical_ids)).all()
+        if analytical_ids else []
+    )
+    narrative = build_fusion_narrative(
+        fusion_date=snapshot.date,
+        opportunity_strength=opportunity_strength,
+        confidence=_fusion_confidence(session, analytical_ids, snapshot),
+        signal_structure=_signal_structure(session, analytical_ids),
+        evidence_independence=_evidence_independence(session, analytical_ids),
+        conflicts=conflicts,
+        blocking_conditions=blocking_conditions,
+        strength_basis=strength_basis,
+        signals=signal_rows,
+    )
+
     fusion = _upsert_fusion_record(
         session,
         stock_id=stock.id,
@@ -85,6 +102,7 @@ def write_p5_p6_compat_records(
         conflict_flag=bool(conflicts),
         human_review_required=bool(blocking_conditions and snapshot.cycle_score >= 60),
         analytical_signal_ids=analytical_ids,
+        narrative=narrative,
         metadata={
             "score_snapshot_id": snapshot.id,
             "cycle_score": snapshot.cycle_score,
@@ -172,6 +190,7 @@ def _upsert_fusion_record(
     human_review_required: bool,
     analytical_signal_ids: list[int],
     metadata: dict[str, Any],
+    narrative: str | None = None,
 ) -> FusionRecord:
     row = (
         session.query(FusionRecord)
@@ -194,6 +213,7 @@ def _upsert_fusion_record(
     row.conflict_flag = conflict_flag
     row.human_review_required = human_review_required
     row.analytical_signal_ids_json = json.dumps(analytical_signal_ids)
+    row.narrative = narrative
     row.metadata_json = json.dumps(metadata, default=str)
     session.flush()
     return row

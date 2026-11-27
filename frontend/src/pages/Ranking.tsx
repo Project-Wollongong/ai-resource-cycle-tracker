@@ -19,7 +19,7 @@ const COMMODITY_COLORS: Record<string, string> = {
   rare_earth: "purple",
 };
 
-function SubScores({ s }: { s: StockWithScore }) {
+export function SubScores({ s }: { s: StockWithScore }) {
   if (!s.latest_score) return null;
   const parts: [string, number][] = [
     ["F", s.latest_score.funding_score],
@@ -37,25 +37,35 @@ function SubScores({ s }: { s: StockWithScore }) {
     "Risk 10%",
     "Sentiment 10%",
   ];
-  // Sentiment has no data source at all — every stock carries the hardcoded
-  // 50.0 default — so it is shown as absent rather than as a middling score.
-  // The other sub-scores cannot be told apart from a genuine 50 here: the list
-  // endpoint returns components as null, so the "neutral_default" marker the
-  // scorer writes is not available. Guessing from the value alone would
-  // mislabel a real 50, which is the error this whole treatment exists to stop.
-  const ABSENT_KEYS = new Set(["S"]);
+  // A measured 50 and a defaulted 50 are the same number meaning opposite
+  // things, so the marker is read rather than guessed from the value. The list
+  // response used to omit it, which left every sub-score but Sentiment
+  // ambiguous here; it now carries component_sources.
+  const SOURCE_KEYS: Record<string, string> = {
+    F: "funding", A: "announcement", R: "resource",
+    C: "commodity", K: "risk", S: "sentiment",
+  };
+  const sources = s.latest_score.component_sources ?? null;
+  const isAbsent = (key: string) => {
+    // Sentiment has no data source at all — every stock carries the hardcoded
+    // default — so it reads as absent whether or not the marker arrived.
+    if (key === "S") return true;
+    const source = sources?.[SOURCE_KEYS[key]];
+    return source === "neutral_default" || source === "insufficient_data";
+  };
 
   return (
     <Space size={7}>
       {parts.map(([k, v], i) => {
-        const absent = ABSENT_KEYS.has(String(k));
+        const absent = isAbsent(String(k));
+        const source = sources?.[SOURCE_KEYS[String(k)]];
         return (
           <Tooltip
             key={k}
             title={
               absent
-                ? `${names[i]}：无数据源，固定为默认值 ${v.toFixed(1)}`
-                : `${names[i]}：${v.toFixed(1)}`
+                ? `${names[i]}：未实测，取默认值 ${v.toFixed(1)}${source ? `（${source}）` : ""}`
+                : `${names[i]}：${v.toFixed(1)}${source ? `（来源 ${source}）` : ""}`
             }
           >
             <span

@@ -135,6 +135,12 @@ class ScoreBrief(BaseModel):
     cycle_score: float
     label: str
     components: dict[str, Any] | None = None
+    # Which sub-scores were measured and which fell back to the neutral 50.
+    # The full components blob is heavy and the ranking list does not carry it,
+    # so a defaulted 50 and a measured 50 were indistinguishable there — the
+    # exact confusion the absent/present treatment exists to prevent. This is
+    # the one field needed to tell them apart, cheap enough to send with a list.
+    component_sources: dict[str, str] | None = None
 
 
 class StockOut(BaseModel):

@@ -29,6 +29,7 @@ function data(overrides: Partial<Readings> = {}): Readings {
       evidence_independence: "high",
       conflicts: [],
       blocking_conditions: [],
+      narrative: "综合研判（截至 2026-11-26）\n结论：机会强度弱。",
       strength_basis: {
         positive_sources: 1,
         negative_sources: 2,
@@ -132,6 +133,13 @@ describe("EngineReadings", () => {
     const { container } = render(<EngineReadings data={data()} />);
 
     expect(container.textContent).not.toContain("旧版 Cycle Score");
+  });
+
+  it("shows the fusion narrative", () => {
+    const { container } = render(<EngineReadings data={data()} />);
+
+    expect(container.textContent).toContain("综合研判");
+    expect(container.textContent).toContain("结论：机会强度弱");
   });
 
   it("asks for a pipeline run instead of rendering an empty panel", () => {

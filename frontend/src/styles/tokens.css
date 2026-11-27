@@ -8,8 +8,11 @@
  * how present the ink is, which leaves the budget intact and lets "we have no
  * data" look unmistakably different from "we checked and it is fine".
  *
- * Light only for now; the dark palette lands as one unit with the AntD dark
- * algorithm rather than as CSS that would disagree with the component library.
+ * Both modes live in theme.ts and are written onto :root at startup, so these
+ * literals only have to carry the first paint before React mounts. The dark
+ * block below exists for that one frame: without it a machine set to dark
+ * flashes a white page. Once applyPaletteVars runs, the inline values on the
+ * root element win over everything here.
  */
 
 :root {
@@ -47,6 +50,20 @@
     "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas,
     monospace;
+}
+
+/* First paint only.
+   Just the three colours a blank page shows before React mounts: without them
+   a machine set to dark flashes white. The other fifteen cannot be seen in
+   that frame, and every literal duplicated here is one that can drift from
+   theme.ts, so they are deliberately not repeated. Guarded so an explicit
+   light choice is never overridden by the machine's preference. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0e1419;
+    --surface: #161d24;
+    --ink: #e6ecf1;
+  }
 }
 
 html,

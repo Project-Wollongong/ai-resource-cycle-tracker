@@ -1071,6 +1071,10 @@ class FusionRecord(Base):
     conflict_flag: Mapped[bool] = mapped_column(Boolean, default=False)
     human_review_required: Mapped[bool] = mapped_column(Boolean, default=False)
     analytical_signal_ids_json: Mapped[str] = mapped_column(Text, default="[]")
+    # P06 calls the narrative its primary deliverable; there was nowhere to put
+    # one. What a rules engine can write is a synthesis, not a trader's prose,
+    # and it says so rather than passing for the latter.
+    narrative: Mapped[str | None] = mapped_column(Text, nullable=True)
     rule_version: Mapped[str] = mapped_column(String(80), default="manual_v1")
     model_version: Mapped[str | None] = mapped_column(String(80), nullable=True)
     metadata_json: Mapped[str] = mapped_column(Text, default="{}")

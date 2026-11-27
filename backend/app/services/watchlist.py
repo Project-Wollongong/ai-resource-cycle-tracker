@@ -36,6 +36,7 @@ def build_stock_view(session: Session, stock: Stock, include_components: bool = 
         .first()
     )
     if snap is not None:
+        components = json.loads(snap.components) if snap.components else None
         view.latest_score = ScoreBrief(
             date=snap.date,
             funding_score=snap.funding_score,
@@ -46,6 +47,25 @@ def build_stock_view(session: Session, stock: Stock, include_components: bool = 
             sentiment_score=snap.sentiment_score,
             cycle_score=snap.cycle_score,
             label=snap.label,
-            components=json.loads(snap.components) if include_components else None,
+            components=components if include_components else None,
+            component_sources=_sources(components),
         )
     return view
+
+
+def _sources(components: dict | None) -> dict[str, str] | None:
+    """Just the `source` of each sub-score.
+
+    A measured 50 and a defaulted 50 are the same number meaning opposite
+    things, and the scorer records which. Sending the marker without the rest
+    of the components keeps a list response small while letting the ranking
+    page stop guessing from the value.
+    """
+    if not components:
+        return None
+    found = {
+        name: str(block["source"])
+        for name, block in components.items()
+        if isinstance(block, dict) and block.get("source")
+    }
+    return found or None

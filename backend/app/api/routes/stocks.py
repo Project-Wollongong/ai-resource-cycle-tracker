@@ -351,6 +351,7 @@ def stock_engine_readings(code: str, db: Session = Depends(get_db)):
             "evidence_independence": fusion.evidence_independence,
             "conflicts": _loads(fusion.conflicts_json, []),
             "blocking_conditions": _loads(fusion.blocking_conditions_json, []),
+            "narrative": fusion.narrative,
             "strength_basis": metadata.get("strength_basis"),
             # what the retired Cycle Score lookup would have said, so the two
             # can be compared rather than one quietly replacing the other

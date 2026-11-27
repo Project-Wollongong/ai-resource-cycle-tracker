@@ -32,10 +32,17 @@ def update_attention_state_from_fusion(
     stock: Stock,
     fusion: FusionRecord,
 ) -> AttentionState:
+    # "has the engine already processed this fusion record?" — a state a person
+    # set carries the same fusion id, so including those made the question
+    # ambiguous and the query raised MultipleResultsFound the moment anyone
+    # used the override twice. Ordered and taken singly rather than asserted
+    # unique: the manual path is allowed to leave several.
     existing_for_fusion = (
         session.query(AttentionState)
         .filter_by(stock_id=stock.id, fusion_record_id=fusion.id, rule_version=P7_RULE_VERSION)
-        .one_or_none()
+        .filter(AttentionState.compute_profile != "manual")
+        .order_by(AttentionState.id.desc())
+        .first()
     )
     if existing_for_fusion is not None:
         return existing_for_fusion
