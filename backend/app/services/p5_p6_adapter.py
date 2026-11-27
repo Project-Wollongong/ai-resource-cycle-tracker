@@ -76,7 +76,7 @@ def write_p5_p6_compat_records(
     narrative = build_fusion_narrative(
         fusion_date=snapshot.date,
         opportunity_strength=opportunity_strength,
-        confidence=_fusion_confidence(session, analytical_ids, snapshot),
+        confidence=_fusion_confidence(session, analytical_ids),
         signal_structure=_signal_structure(session, analytical_ids),
         evidence_independence=_evidence_independence(session, analytical_ids),
         conflicts=conflicts,
@@ -90,7 +90,7 @@ def write_p5_p6_compat_records(
         stock_id=stock.id,
         fusion_date=snapshot.date,
         opportunity_strength=opportunity_strength,
-        confidence=_fusion_confidence(session, analytical_ids, snapshot),
+        confidence=_fusion_confidence(session, analytical_ids),
         signal_structure=_signal_structure(session, analytical_ids),
         evidence_independence=_evidence_independence(session, analytical_ids),
         dominant_drivers=_dominant_drivers(components, signals),
@@ -499,20 +499,36 @@ def _strength_from_score(score: float) -> str:
     return "none"
 
 
-def _fusion_confidence(session: Session, analytical_ids: list[int], snapshot: ScoreSnapshot) -> str:
-    """Confidence counts independent sources, not rows.
+def _fusion_confidence(session: Session, analytical_ids: list[int]) -> str:
+    """How much the reading can be leaned on, from the readings themselves.
 
-    Counting rows let one engine's seven lenses, all reading the same day of
-    price action, present themselves as three independent agreements.
+    Two inputs, both already stated by the engines: how many independent
+    sources carried a direction, and how confident those readings said they
+    were. Counting rows instead of sources let one engine's seven lenses, all
+    reading the same day of price action, present as three agreements.
+
+    This used to be gated on the old chain's risk_score, which meant the last
+    thing the new chain could not account for still sat in the middle of its
+    verdict. Risk has its own route into the record — blocking_conditions,
+    which stops a fusion from being actionable at all — and does not need a
+    second one here.
     """
-    sources = {
-        row.dependency_group
-        for row in session.query(AnalyticalSignal).filter(AnalyticalSignal.id.in_(analytical_ids)).all()
-        if row.dependency_group
-    } if analytical_ids else set()
-    if len(sources) >= 3 and snapshot.risk_score >= 45:
+    rows = (
+        session.query(AnalyticalSignal).filter(AnalyticalSignal.id.in_(analytical_ids)).all()
+        if analytical_ids else []
+    )
+    directional = [row for row in rows if row.direction != "neutral"]
+    sources = {row.dependency_group for row in directional if row.dependency_group}
+    if not sources:
+        return "low"
+    stated = [row.confidence for row in directional if row.confidence is not None]
+    mean = sum(stated) / len(stated) if stated else 0.0
+
+    if len(sources) >= 3 and mean >= 0.65:
         return "high"
-    if sources and snapshot.risk_score >= 35:
+    if len(sources) >= 2 and mean >= 0.5:
+        return "medium"
+    if mean >= 0.5:
         return "medium"
     return "low"
 

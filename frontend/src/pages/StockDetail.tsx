@@ -16,7 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { api } from "../api/client";
-import type { Announcement, AttentionView, EngineReadings as EngineReadingsData, P3EntityMapping, P3Event, P3Fact, P3InformationPoint, P3ParseStatus, P4Feature, PriceBar, ScoreBrief, Signal, StockProject, StockWithScore } from "../api/types";
+import type { Announcement, AttentionView, CatalystMap as CatalystMapData, EngineReadings as EngineReadingsData, P3EntityMapping, P3Event, P3Fact, P3InformationPoint, P3ParseStatus, P4Feature, PriceBar, ScoreBrief, Signal, StockProject, StockWithScore } from "../api/types";
 import LabelTag from "../components/LabelTag";
 import Pct from "../components/Pct";
 import { P3EventDetails, P3EventTags } from "../components/P3EventClassification";
@@ -24,6 +24,7 @@ import P3FactsTable, { hasDrillContext, neutralFactSummary } from "../components
 import P3InformationPoints from "../components/P3InformationPoints";
 import P3EntityMappings from "../components/P3EntityMappings";
 import AttentionControl from "../components/AttentionControl";
+import CatalystMap from "../components/CatalystMap";
 import EngineReadings from "../components/EngineReadings";
 import FundingRunwayPanel from "../components/FundingRunwayPanel";
 import NoData from "../components/NoData";
@@ -64,6 +65,7 @@ export default function StockDetail() {
   const [features, setFeatures] = useState<P4Feature[]>([]);
   const [engines, setEngines] = useState<EngineReadingsData | null>(null);
   const [attention, setAttention] = useState<AttentionView | null>(null);
+  const [catalystMap, setCatalystMap] = useState<CatalystMapData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resourceOverride, setResourceOverride] = useState<number | null>(null);
   const [riskOverride, setRiskOverride] = useState<number | null>(null);
@@ -73,7 +75,7 @@ export default function StockDetail() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [s, p, sc, a, sg, ps, pf, eng] = await Promise.all([
+      const [s, p, sc, a, sg, ps, pf, eng, cmap] = await Promise.all([
         api.get<StockWithScore>(`/stocks/${code}`),
         api.get<PriceBar[]>(`/stocks/${code}/prices?days=250`),
         api.get<ScoreBrief[]>(`/stocks/${code}/scores?days=120`),
@@ -82,6 +84,7 @@ export default function StockDetail() {
         api.get<StockProject[]>(`/stocks/${code}/projects`),
         api.get<P4Feature[]>(`/stocks/${code}/features`),
         api.get<EngineReadingsData>(`/stocks/${code}/engines`),
+        api.get<CatalystMapData>(`/stocks/${code}/catalyst-map`),
       ]);
       // a stock with no fusion record yet has no attention state either, and
       // that is a normal state rather than a failure of the page
@@ -123,6 +126,7 @@ export default function StockDetail() {
       setProjects(ps);
       setFeatures(pf);
       setEngines(eng);
+      setCatalystMap(cmap);
       setResourceOverride(s.resource_score_override);
       setRiskOverride(s.risk_score_override);
     } catch (e) {
@@ -258,6 +262,10 @@ export default function StockDetail() {
 
       <Card size="small" title="注意力状态（P07）与交易决策（P08）">
         <AttentionControl code={code!} state={attention} onChange={load} />
+      </Card>
+
+      <Card size="small" title="项目进度与未来催化（Forward Catalyst Map）">
+        {catalystMap ? <CatalystMap data={catalystMap} /> : "加载中"}
       </Card>
 
       <Card size="small" title="引擎读数与融合判断（P05 / P06）">

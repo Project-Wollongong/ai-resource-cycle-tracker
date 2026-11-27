@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from ...models import AnalyticalSignal, FusionRecord, P4Feature, Announcement, PriceBar, Project, ScoreSnapshot, Signal, Stock, StockProject
+from ...models import AnalyticalSignal, ForwardCatalystMap, FusionRecord, P4Feature, Announcement, PriceBar, Project, ScoreSnapshot, Signal, Stock, StockProject
 from ...schemas import (
     AnnouncementOut,
     Message,
@@ -359,3 +359,43 @@ def stock_engine_readings(code: str, db: Session = Depends(get_db)):
         },
         "engines": sorted(engines.values(), key=lambda item: item["engine"]),
     }
+
+
+@router.get("/{code}/catalyst-map")
+def stock_catalyst_map(code: str, limit: int = 10, db: Session = Depends(get_db)):
+    """The Catalyst Agent's running view of where a project stands.
+
+    P05 calls this persistent internal state rather than an output, and it is
+    appended per day rather than overwritten, because the change between two
+    days is the finding. The history is returned alongside the current entry
+    for that reason.
+    """
+    stock = _get_stock_or_404(db, code)
+    rows = (
+        db.query(ForwardCatalystMap)
+        .filter_by(stock_id=stock.id)
+        .order_by(ForwardCatalystMap.as_of_date.desc(), ForwardCatalystMap.id.desc())
+        .limit(min(limit, 60))
+        .all()
+    )
+    if not rows:
+        return {"current": None, "history": []}
+
+    def out(row: ForwardCatalystMap) -> dict:
+        return {
+            "as_of_date": row.as_of_date,
+            "current_stage": row.current_stage,
+            "previous_stage": row.previous_stage,
+            "next_expected_event": row.next_expected_event,
+            "expected_window": row.expected_window,
+            "importance": row.importance,
+            # qualitative by design: the pilot has no milestone probability
+            # model and the PRD forbids inventing one where evidence is absent
+            "probability": row.probability,
+            "dependencies": _loads(row.dependencies_json, []),
+            "bottlenecks": _loads(row.bottlenecks_json, []),
+            "evidence_basis": _loads(row.evidence_basis_json, []),
+            "change_since_previous": row.change_since_previous,
+        }
+
+    return {"current": out(rows[0]), "history": [out(row) for row in rows[1:]]}

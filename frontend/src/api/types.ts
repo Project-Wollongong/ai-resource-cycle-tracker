@@ -1009,3 +1009,23 @@ export interface AttentionView {
     reason: string | null;
   } | null;
 }
+
+
+export interface CatalystMapEntry {
+  as_of_date: string;
+  current_stage: string | null;
+  previous_stage: string | null;
+  next_expected_event: string | null;
+  expected_window: string | null;
+  importance: string | null;
+  probability: string;
+  dependencies: { event: string; status: string; days_open: number }[];
+  bottlenecks: string[];
+  evidence_basis: string[];
+  change_since_previous: string | null;
+}
+
+export interface CatalystMap {
+  current: CatalystMapEntry | null;
+  history: CatalystMapEntry[];
+}

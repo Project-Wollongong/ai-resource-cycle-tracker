@@ -18,12 +18,17 @@ def stock(db_session):
 
 
 def signals(db_session, stock, *specs):
-    """specs are (engine, direction, magnitude, dependency_group)."""
+    """specs are (engine, direction, magnitude, dependency_group[, confidence]).
+
+    Confidence defaults to the magnitude, which keeps the strength cases short
+    while letting the confidence cases set the two apart.
+    """
     rows = [
-        AnalyticalSignal(stock_id=stock.id, signal_date=AS_OF, engine=engine,
-                         direction=direction, magnitude=magnitude,
-                         dependency_group=group)
-        for engine, direction, magnitude, group in specs
+        AnalyticalSignal(stock_id=stock.id, signal_date=AS_OF, engine=spec[0],
+                         direction=spec[1], magnitude=spec[2],
+                         dependency_group=spec[3],
+                         confidence=spec[4] if len(spec) > 4 else spec[2])
+        for spec in specs
     ]
     db_session.add_all(rows)
     db_session.commit()
@@ -176,3 +181,62 @@ def test_agreement_produces_no_divergence_entry(db_session, stock):
     found = _conflicts(db_session, [1], _snapshot(stock), [], basis)
 
     assert not any("divergence" in item for item in found)
+
+
+# --- confidence, from the readings rather than the old chain ----------------
+
+from app.services.p5_p6_adapter import _fusion_confidence  # noqa: E402
+
+
+def conf(db_session, stock, *specs):
+    return _fusion_confidence(db_session, signals(db_session, stock, *specs))
+
+
+def test_no_directional_reading_is_low_confidence(db_session, stock):
+    assert conf(db_session, stock, ("technical", "neutral", 0.85, "price_action:x")) == "low"
+
+
+def test_three_confident_independent_sources_read_as_high(db_session, stock):
+    assert conf(
+        db_session, stock,
+        ("technical", "positive", 0.75, "price_action:x"),
+        ("catalyst", "positive", 0.75, "announcement_event:x:resource"),
+        ("fundamental", "positive", 0.75, "project_progress:x"),
+    ) == "high"
+
+
+def test_three_sources_that_doubt_themselves_do_not_reach_high(db_session, stock):
+    """The lenses state their own confidence; three tentative readings are
+    three tentative readings however independent they are."""
+    assert conf(
+        db_session, stock,
+        ("technical", "positive", 0.4, "price_action:x"),
+        ("catalyst", "positive", 0.4, "announcement_event:x:resource"),
+        ("fundamental", "positive", 0.4, "project_progress:x"),
+    ) == "low"
+
+
+def test_seven_lenses_on_one_day_of_price_are_one_source(db_session, stock):
+    # counting rows let a single engine present as three agreements
+    assert conf(
+        db_session, stock,
+        ("technical", "positive", 0.85, "price_action:x"),
+        ("technical", "positive", 0.85, "price_action:x"),
+        ("technical", "positive", 0.85, "price_action:x"),
+    ) == "medium"
+
+
+def test_the_old_risk_score_no_longer_reaches_this_verdict(db_session, stock):
+    """Risk has its own route into the record — blocking_conditions, which
+    stops a fusion being actionable at all — and does not need a second one
+    inside confidence, where it was the last piece of the old chain."""
+    import inspect
+
+    from app.services import p5_p6_adapter
+
+    # the docstring explains what was removed, so the check reads the code
+    # rather than the prose around it
+    source = inspect.getsource(p5_p6_adapter._fusion_confidence)
+    body = source.split('"""')[2] if source.count('"""') >= 2 else source
+    assert "risk_score" not in body
+    assert "snapshot" not in inspect.signature(p5_p6_adapter._fusion_confidence).parameters
