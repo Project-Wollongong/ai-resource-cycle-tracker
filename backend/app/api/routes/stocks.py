@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from ...models import P4Feature, Announcement, PriceBar, Project, ScoreSnapshot, Signal, Stock, StockProject
+from ...models import AnalyticalSignal, FusionRecord, P4Feature, Announcement, PriceBar, Project, ScoreSnapshot, Signal, Stock, StockProject
 from ...schemas import (
     AnnouncementOut,
     Message,
@@ -283,3 +283,78 @@ def stock_features(code: str, feature_group: str | None = None, db: Session = De
         }
         for row in rows
     ]
+
+
+def _loads(raw: str | None, fallback):
+    try:
+        return json.loads(raw or "")
+    except (TypeError, ValueError):
+        return fallback
+
+
+@router.get("/{code}/engines")
+def stock_engine_readings(code: str, db: Session = Depends(get_db)):
+    """What each P05 engine read, and what P06 made of the set.
+
+    The engines write their findings and their narratives, and the fusion
+    layer records where they agree and where they pull against each other,
+    but none of it had a way out of the database. A verdict nobody can read
+    the reasoning for is not much better than no verdict.
+    """
+    stock = _get_stock_or_404(db, code)
+    fusion = (
+        db.query(FusionRecord)
+        .filter_by(stock_id=stock.id)
+        .order_by(FusionRecord.fusion_date.desc(), FusionRecord.id.desc())
+        .first()
+    )
+    if fusion is None:
+        return {"as_of": None, "fusion": None, "engines": []}
+
+    rows = (
+        db.query(AnalyticalSignal)
+        .filter_by(stock_id=stock.id, signal_date=fusion.fusion_date)
+        .order_by(AnalyticalSignal.engine, AnalyticalSignal.id)
+        .all()
+    )
+
+    engines: dict[str, dict] = {}
+    for row in rows:
+        metadata = _loads(row.metadata_json, {})
+        bucket = engines.setdefault(
+            row.engine,
+            {"engine": row.engine, "logic_version": row.logic_version,
+             "narrative": row.narrative, "readings": []},
+        )
+        # every reading of one engine on one day shares its narrative; keep the
+        # first non-empty rather than repeating it per row
+        bucket["narrative"] = bucket["narrative"] or row.narrative
+        bucket["readings"].append({
+            "lens": metadata.get("lens"),
+            "direction": row.direction,
+            "magnitude": metadata.get("magnitude_label"),
+            "confidence": metadata.get("confidence_label"),
+            "persistence": row.persistence,
+            "summary": metadata.get("summary"),
+            "drivers": _loads(row.key_drivers_json, []),
+            "risks": _loads(row.key_risks_json, []),
+            "dependency_group": row.dependency_group,
+        })
+
+    metadata = _loads(fusion.metadata_json, {})
+    return {
+        "as_of": fusion.fusion_date,
+        "fusion": {
+            "opportunity_strength": fusion.opportunity_strength,
+            "confidence": fusion.confidence,
+            "signal_structure": fusion.signal_structure,
+            "evidence_independence": fusion.evidence_independence,
+            "conflicts": _loads(fusion.conflicts_json, []),
+            "blocking_conditions": _loads(fusion.blocking_conditions_json, []),
+            "strength_basis": metadata.get("strength_basis"),
+            # what the retired Cycle Score lookup would have said, so the two
+            # can be compared rather than one quietly replacing the other
+            "cycle_score_strength": metadata.get("cycle_score_strength"),
+        },
+        "engines": sorted(engines.values(), key=lambda item: item["engine"]),
+    }

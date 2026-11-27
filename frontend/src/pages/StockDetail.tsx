@@ -16,13 +16,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { api } from "../api/client";
-import type { Announcement, P3EntityMapping, P3Event, P3Fact, P3InformationPoint, P3ParseStatus, P4Feature, PriceBar, ScoreBrief, Signal, StockProject, StockWithScore } from "../api/types";
+import type { Announcement, EngineReadings as EngineReadingsData, P3EntityMapping, P3Event, P3Fact, P3InformationPoint, P3ParseStatus, P4Feature, PriceBar, ScoreBrief, Signal, StockProject, StockWithScore } from "../api/types";
 import LabelTag from "../components/LabelTag";
 import Pct from "../components/Pct";
 import { P3EventDetails, P3EventTags } from "../components/P3EventClassification";
 import P3FactsTable, { hasDrillContext, neutralFactSummary } from "../components/P3FactsTable";
 import P3InformationPoints from "../components/P3InformationPoints";
 import P3EntityMappings from "../components/P3EntityMappings";
+import EngineReadings from "../components/EngineReadings";
 import FundingRunwayPanel from "../components/FundingRunwayPanel";
 import NoData from "../components/NoData";
 import PriceVolumeChart from "../components/PriceVolumeChart";
@@ -60,6 +61,7 @@ export default function StockDetail() {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [projects, setProjects] = useState<StockProject[]>([]);
   const [features, setFeatures] = useState<P4Feature[]>([]);
+  const [engines, setEngines] = useState<EngineReadingsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resourceOverride, setResourceOverride] = useState<number | null>(null);
   const [riskOverride, setRiskOverride] = useState<number | null>(null);
@@ -69,7 +71,7 @@ export default function StockDetail() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [s, p, sc, a, sg, ps, pf] = await Promise.all([
+      const [s, p, sc, a, sg, ps, pf, eng] = await Promise.all([
         api.get<StockWithScore>(`/stocks/${code}`),
         api.get<PriceBar[]>(`/stocks/${code}/prices?days=250`),
         api.get<ScoreBrief[]>(`/stocks/${code}/scores?days=120`),
@@ -77,6 +79,7 @@ export default function StockDetail() {
         api.get<Signal[]>(`/stocks/${code}/signals?limit=200`),
         api.get<StockProject[]>(`/stocks/${code}/projects`),
         api.get<P4Feature[]>(`/stocks/${code}/features`),
+        api.get<EngineReadingsData>(`/stocks/${code}/engines`),
       ]);
       setStock(s);
       setBars(p);
@@ -110,6 +113,7 @@ export default function StockDetail() {
       setSignals(sg);
       setProjects(ps);
       setFeatures(pf);
+      setEngines(eng);
       setResourceOverride(s.resource_score_override);
       setRiskOverride(s.risk_score_override);
     } catch (e) {
@@ -241,6 +245,10 @@ export default function StockDetail() {
 
       <Card size="small" title="资金跑道（P04 衍生指标）">
         <FundingRunwayPanel features={features} />
+      </Card>
+
+      <Card size="small" title="引擎读数与融合判断（P05 / P06）">
+        {engines ? <EngineReadings data={engines} /> : "加载中"}
       </Card>
 
       <Row gutter={16}>

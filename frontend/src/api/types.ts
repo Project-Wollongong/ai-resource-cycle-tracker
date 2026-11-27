@@ -907,6 +907,9 @@ export interface P4Feature {
     consistent?: boolean;
     classification?: string;
     likely_column_misread?: boolean;
+  // set when item 8.3 reported a net inflow, in which case there is no runway
+  cash_direction?: string;
+  runway_not_applicable?: boolean;
   };
 }
 
@@ -940,4 +943,47 @@ export interface TodayBoard {
   new_announcements: number;
   items: TodayItem[];
   quiet: string[];
+}
+
+
+export interface EngineReading {
+  lens: string | null;
+  direction: string;
+  magnitude: string | null;
+  confidence: string | null;
+  persistence: string | null;
+  summary: string | null;
+  drivers: string[];
+  risks: string[];
+  dependency_group: string | null;
+}
+
+export interface EngineBlock {
+  engine: string;
+  logic_version: string | null;
+  narrative: string | null;
+  readings: EngineReading[];
+}
+
+export interface EngineReadings {
+  as_of: string | null;
+  fusion: {
+    opportunity_strength: string;
+    confidence: string | null;
+    signal_structure: string | null;
+    evidence_independence: string | null;
+    conflicts: string[];
+    blocking_conditions: string[];
+    strength_basis: {
+      positive_sources: number;
+      negative_sources: number;
+      strongest_positive_magnitude: number;
+      engines_positive: string[];
+      engines_negative: string[];
+      cap_applied?: string | null;
+      reason?: string;
+    } | null;
+    cycle_score_strength: string | null;
+  } | null;
+  engines: EngineBlock[];
 }
