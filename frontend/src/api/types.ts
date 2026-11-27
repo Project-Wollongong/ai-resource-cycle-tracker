@@ -987,3 +987,22 @@ export interface EngineReadings {
   } | null;
   engines: EngineBlock[];
 }
+
+
+export interface AttentionView {
+  state_level: string;
+  state_label: string;
+  previous_state_level: string | null;
+  transition: string;
+  reason: string;
+  manual_override: boolean;
+  manual_lock: boolean;
+  alert_priority: string | null;
+  effective_at: string | null;
+  trade_decision: {
+    decision: string;
+    action: string;
+    conviction: string | null;
+    reason: string | null;
+  } | null;
+}
