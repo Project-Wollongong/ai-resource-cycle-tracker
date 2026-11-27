@@ -64,7 +64,9 @@ def write_p5_p6_compat_records(
     # and writes its own rows; nothing is projected here.
 
     risk = components.get("risk") if isinstance(components.get("risk"), dict) else {}
-    blocking_conditions = _blocking_conditions(snapshot.risk_score, risk)
+    blocking_conditions = _blocking_conditions(
+        session, analytical_ids, snapshot.risk_score, risk
+    )
     opportunity_strength, strength_basis = _opportunity_strength(session, analytical_ids)
     conflicts = _conflicts(session, analytical_ids, snapshot, signals, strength_basis)
     official_result = "blocked" if blocking_conditions else opportunity_strength
@@ -93,10 +95,10 @@ def write_p5_p6_compat_records(
         confidence=_fusion_confidence(session, analytical_ids),
         signal_structure=_signal_structure(session, analytical_ids),
         evidence_independence=_evidence_independence(session, analytical_ids),
-        dominant_drivers=_dominant_drivers(components, signals),
+        dominant_drivers=_dominant_drivers(session, analytical_ids),
         conflicts=conflicts,
         blocking_conditions=blocking_conditions,
-        overheating_risk=_overheating_risk(snapshot, signals),
+        overheating_risk=_overheating_risk(session, analytical_ids),
         official_result=official_result,
         shadow_result=None,
         conflict_flag=bool(conflicts),
@@ -378,16 +380,44 @@ def _announcement_drivers(announcement: dict[str, Any]) -> list[str]:
     return drivers
 
 
-def _blocking_conditions(risk_score: float, risk: dict[str, Any]) -> list[str]:
-    conditions = []
+def _blocking_conditions(
+    session: Session, analytical_ids: list[int], risk_score: float, risk: dict[str, Any]
+) -> list[str]:
+    """What stops this from being actionable, whatever the strength says.
+
+    Part of this still comes from the old chain and will until P05 has
+    something to replace it. There is no risk engine: P05 defines three
+    agents and risk is not one of them, so the risk sub-score is the only
+    reading of it the system has. Rather than drop it or pretend it is new,
+    the condition names where it came from, so a reader can see which half of
+    this list the engines produced.
+    """
+    conditions: list[str] = []
+
+    # from P05, where an engine has something disqualifying to say
+    rows = (
+        session.query(AnalyticalSignal).filter(AnalyticalSignal.id.in_(analytical_ids)).all()
+        if analytical_ids else []
+    )
+    for row in rows:
+        if row.engine != "catalyst" or row.direction != "negative":
+            continue
+        if _lens_name(row) != "milestone":
+            continue
+        # a commitment the company took back is disqualifying on its own: the
+        # plan the case rested on is no longer the plan
+        conditions.append("catalyst:withdrawn_commitment")
+        break
+
+    # from the old chain, labelled as such
     if risk_score < 30:
-        conditions.append("risk_score_below_30")
+        conditions.append("legacy_risk_score_below_30")
     events = risk.get("events")
     if isinstance(events, list):
         for event in events:
             if isinstance(event, dict) and event.get("adjustment", 0) <= -16:
                 reason = event.get("reason")
-                conditions.append(str(reason or "material_risk_event"))
+                conditions.append(f"legacy_risk:{reason or 'material_risk_event'}")
     return conditions[:5]
 
 
@@ -576,22 +606,67 @@ def _engines(session: Session, analytical_ids: list[int]) -> set[str]:
     }
 
 
-def _dominant_drivers(components: dict[str, Any], signals: list[Signal]) -> list[str]:
+def _dominant_drivers(session: Session, analytical_ids: list[int]) -> list[str]:
+    """What is actually driving the record, in the engines' own words.
+
+    This used to list sub-score values — "announcement: 100" — which named
+    the number rather than the finding, and then appended the raw text of
+    whichever old signals happened to come first. The engines write a summary
+    per reading; the strongest of those is the driver.
+    """
+    rows = (
+        session.query(AnalyticalSignal).filter(AnalyticalSignal.id.in_(analytical_ids)).all()
+        if analytical_ids else []
+    )
+    directional = [row for row in rows if row.direction != "neutral"]
+    ranked = sorted(directional, key=lambda row: row.magnitude or 0.0, reverse=True)
     drivers = []
-    for key in ("announcement", "resource", "commodity", "risk"):
-        comp = components.get(key)
-        if isinstance(comp, dict):
-            value = comp.get("value") or comp.get("best") or comp.get("instrument")
-            if value is not None:
-                drivers.append(f"{key}: {value}")
-    drivers.extend(signal.reason for signal in signals[:3])
-    return drivers[:6]
+    for row in ranked[:6]:
+        metadata = _loads(row.metadata_json, {})
+        summary = metadata.get("summary") or (_loads(row.key_drivers_json, []) or [""])[0]
+        lens = _lens_name(row)
+        drivers.append(f"{row.engine}{f'·{lens}' if lens else ''}: {summary}".strip())
+    return drivers
 
 
-def _overheating_risk(snapshot: ScoreSnapshot, signals: list[Signal]) -> str:
-    has_technical = any(signal.signal_type in TECHNICAL_SIGNAL_TYPES for signal in signals)
-    if has_technical and snapshot.announcement_score < 20 and snapshot.resource_score <= 50:
+def _overheating_risk(session: Session, analytical_ids: list[int]) -> str:
+    """Price running ahead of what is behind it, read from the lenses that
+    measure exactly that.
+
+    The old form asked whether a price signal had fired while the
+    announcement and resource sub-scores were low — a reasonable proxy
+    assembled before there was anything better. The Technical Agent now
+    reports stretch directly: `exhaustion` measures how far price has pulled
+    from its own habit rather than from a fixed percentage, and
+    `participation` catches a rise the volume is not supporting. Asking them
+    is both more direct and the only version that moves when the engines do.
+
+    This one matters more than the other fields: P08 turns a Decision Ready
+    state into `wait` rather than `act` when it reads medium or high.
+    """
+    rows = (
+        session.query(AnalyticalSignal).filter(AnalyticalSignal.id.in_(analytical_ids)).all()
+        if analytical_ids else []
+    )
+    lenses = {
+        (row.engine, _lens_name(row)): row
+        for row in rows
+        if row.direction == "negative"
+    }
+    stretched = ("technical", "exhaustion") in lenses
+    unsupported = ("technical", "participation") in lenses
+    # a rise with nothing but price behind it is the case the old proxy was
+    # reaching for: no engine other than technical has anything positive to say
+    substance = {
+        row.engine for row in rows if row.direction == "positive" and row.engine != "technical"
+    }
+
+    if stretched and not substance:
         return "high"
-    if has_technical and snapshot.risk_score < 45:
+    if stretched or unsupported:
         return "medium"
     return "low"
+
+
+def _lens_name(signal: AnalyticalSignal) -> str:
+    return str(_loads(signal.metadata_json, {}).get("lens") or "")

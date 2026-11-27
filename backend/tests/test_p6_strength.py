@@ -240,3 +240,105 @@ def test_the_old_risk_score_no_longer_reaches_this_verdict(db_session, stock):
     body = source.split('"""')[2] if source.count('"""') >= 2 else source
     assert "risk_score" not in body
     assert "snapshot" not in inspect.signature(p5_p6_adapter._fusion_confidence).parameters
+
+
+# --- overheating, drivers and blockers, read from the engines ---------------
+
+import json as _json  # noqa: E402
+
+from app.services.p5_p6_adapter import (  # noqa: E402
+    _blocking_conditions,
+    _dominant_drivers,
+    _overheating_risk,
+)
+
+
+def lens_signals(db_session, stock, *specs):
+    """specs are (engine, lens, direction, magnitude, summary)."""
+    rows = [
+        AnalyticalSignal(
+            stock_id=stock.id, signal_date=AS_OF, engine=engine, direction=direction,
+            magnitude=magnitude, dependency_group=f"{engine}:x",
+            metadata_json=_json.dumps({"lens": lens, "summary": summary}),
+            key_drivers_json="[]",
+        )
+        for engine, lens, direction, magnitude, summary in specs
+    ]
+    db_session.add_all(rows)
+    db_session.commit()
+    return [row.id for row in rows]
+
+
+def test_a_stretched_price_with_nothing_behind_it_reads_high(db_session, stock):
+    """The case the old proxy was reaching for: price running with no engine
+    but technical having anything positive to say."""
+    ids = lens_signals(db_session, stock,
+                       ("technical", "exhaustion", "negative", 0.75, "偏离 20 日均线 42%"))
+
+    assert _overheating_risk(db_session, ids) == "high"
+
+
+def test_stretch_with_a_catalyst_behind_it_is_only_medium(db_session, stock):
+    ids = lens_signals(
+        db_session, stock,
+        ("technical", "exhaustion", "negative", 0.75, "偏离过大"),
+        ("catalyst", "milestone", "positive", 0.75, "完成 2 项里程碑"),
+    )
+
+    assert _overheating_risk(db_session, ids) == "medium"
+
+
+def test_a_rise_the_volume_is_not_supporting_is_medium(db_session, stock):
+    ids = lens_signals(db_session, stock,
+                       ("technical", "participation", "negative", 0.5, "价涨量缩"))
+
+    assert _overheating_risk(db_session, ids) == "medium"
+
+
+def test_nothing_stretched_is_not_overheating(db_session, stock):
+    ids = lens_signals(db_session, stock,
+                       ("technical", "trend", "positive", 0.75, "均线多头排列"))
+
+    assert _overheating_risk(db_session, ids) == "low"
+
+
+def test_overheating_no_longer_consults_the_old_sub_scores(db_session, stock):
+    import inspect
+
+    from app.services import p5_p6_adapter
+
+    source = inspect.getsource(p5_p6_adapter._overheating_risk)
+    body = source.split('"""')[2]
+    for name in ("announcement_score", "resource_score", "risk_score", "snapshot"):
+        assert name not in body
+
+
+def test_drivers_quote_the_engines_rather_than_naming_a_number(db_session, stock):
+    """"announcement: 100" names the number, not the finding."""
+    ids = lens_signals(
+        db_session, stock,
+        ("catalyst", "bottleneck", "negative", 0.75, "处于 study 阶段，仍缺 FID"),
+        ("technical", "trend", "negative", 0.5, "均线空头排列"),
+    )
+
+    drivers = _dominant_drivers(db_session, ids)
+
+    assert drivers[0] == "catalyst·bottleneck: 处于 study 阶段，仍缺 FID"
+    assert len(drivers) == 2
+
+
+def test_a_withdrawn_commitment_blocks_on_its_own(db_session, stock):
+    """The plan the case rested on is no longer the plan."""
+    ids = lens_signals(db_session, stock,
+                       ("catalyst", "milestone", "negative", 0.75, "1 项安排被撤回"))
+
+    assert "catalyst:withdrawn_commitment" in _blocking_conditions(db_session, ids, 80.0, {})
+
+
+def test_the_legacy_risk_blocker_says_where_it_came_from(db_session, stock):
+    """P05 defines no risk engine, so this half still comes from the old
+    chain. Labelling it is the honest alternative to dropping it or passing
+    it off as new."""
+    found = _blocking_conditions(db_session, [], 20.0, {})
+
+    assert found == ["legacy_risk_score_below_30"]
