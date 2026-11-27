@@ -960,11 +960,22 @@ export interface EngineReading {
   dependency_group: string | null;
 }
 
+export interface LensRosterEntry {
+  lens: string;
+  /** reported | no_material_change | insufficient_data */
+  status: string;
+  direction: string;
+  magnitude: string;
+  summary: string | null;
+}
+
 export interface EngineBlock {
   engine: string;
   logic_version: string | null;
   narrative: string | null;
   readings: EngineReading[];
+  /** all seven lenses, including those that produced no signal */
+  roster?: LensRosterEntry[];
 }
 
 export interface EngineReadings {

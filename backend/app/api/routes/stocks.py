@@ -342,6 +342,11 @@ def stock_engine_readings(code: str, db: Session = Depends(get_db)):
         })
 
     metadata = _loads(fusion.metadata_json, {})
+    for engine, roster in _lens_rosters(db, stock.id, fusion.fusion_date).items():
+        engines.setdefault(engine, {"engine": engine, "logic_version": None,
+                                    "narrative": None, "readings": []})
+        engines[engine]["roster"] = roster
+
     return {
         "as_of": fusion.fusion_date,
         "fusion": {
@@ -399,3 +404,38 @@ def stock_catalyst_map(code: str, limit: int = 10, db: Session = Depends(get_db)
         }
 
     return {"current": out(rows[0]), "history": [out(row) for row in rows[1:]]}
+
+
+def _lens_rosters(db: Session, stock_id: int, as_of) -> dict[str, list[dict]]:
+    """Every lens an engine owns, including the ones with nothing to say.
+
+    Only readings with something material become signals, so a panel built
+    from signals alone cannot tell a lens that looked and found nothing from
+    one that had too little history to look at all. The lenses are pure
+    functions, so the roster is recomputed here rather than stored: it needs
+    no schema and cannot go stale against the data it reads.
+    """
+    from ...analysis.catalyst_lenses import read_all as read_catalyst
+    from ...analysis.technical_lenses import read_all as read_technical
+    from ...models import Stock as StockModel
+    from ...services.p5_catalyst_agent import load_events
+    from ...services.scoring_service import load_bars
+
+    stock = db.get(StockModel, stock_id)
+    out: dict[str, list[dict]] = {}
+
+    def entry(reading) -> dict:
+        return {
+            "lens": reading.lens,
+            "status": reading.status,
+            "direction": reading.direction,
+            "magnitude": reading.magnitude,
+            "summary": reading.summary,
+        }
+
+    bars = load_bars(db, stock)
+    if bars:
+        out["technical"] = [entry(r) for r in read_technical(bars)]
+    events = load_events(db, stock_id)
+    out["catalyst"] = [entry(r) for r in read_catalyst(events, as_of)]
+    return out

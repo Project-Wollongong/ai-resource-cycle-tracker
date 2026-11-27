@@ -1,6 +1,7 @@
 import { Alert, Space, Tag, Typography } from "antd";
 
 import type { EngineReadings as Readings, EngineReading } from "../api/types";
+import LensMatrix from "./LensMatrix";
 import NoData from "./NoData";
 
 /**
@@ -180,6 +181,7 @@ export default function EngineReadings({ data }: { data: Readings }) {
               <span className="micro num">{engine.logic_version}</span>
             )}
           </Space>
+          {engine.roster && <LensMatrix roster={engine.roster} />}
           {engine.readings.map((reading, index) => (
             <Reading key={`${reading.lens}-${index}`} reading={reading} />
           ))}
